@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FOCAS2 Web API 内部文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f0f2f5;color:#333}
+.header{background:linear-gradient(135deg,#1a5276,#2e86c1);color:#fff;padding:20px 30px;position:sticky;top:0;z-index:200}
+.header h1{font-size:24px}
+.header p{font-size:13px;opacity:.85}
+.wrap{display:flex;height:calc(100vh - 80px);overflow:hidden}
+.sidebar{width:340px;min-width:340px;background:#fff;border-right:1px solid #e0e0e0;overflow-y:auto;display:flex;flex-direction:column}
+.sidebar .search-box{padding:12px 14px;border-bottom:1px solid #eee}
+.sidebar .search-box input{width:100%;padding:8px 12px;border:2px solid #d5d8dc;border-radius:6px;font-size:13px;outline:0;transition:border-color .2s}
+.sidebar .search-box input:focus{border-color:#2e86c1}
+.sidebar .list{flex:1;overflow-y:auto;padding:8px 0}
+.sidebar .list .cat-label{padding:8px 14px 4px;font-size:11px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:1px}
+.sidebar .list .nav-item{display:flex;align-items:center;padding:8px 14px;cursor:pointer;gap:8px;border-left:3px solid transparent;transition:all .15s}
+.sidebar .list .nav-item:hover{background:#f0f4f8}
+.sidebar .list .nav-item.active{border-left-color:#2e86c1;background:#eaf2f8}
+.sidebar .list .nav-item.hidden{display:none}
+.sidebar .list .nav-item .nm{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700;color:#fff;min-width:36px;text-align:center;flex-shrink:0}
+.nm-GET,.mth-GET{background:#2e86c1}
+.nm-POST,.mth-POST{background:#27ae60}
+.nm-PUT,.mth-PUT{background:#f39c12}
+.nm-DELETE,.mth-DELETE{background:#e74c3c}
+.sidebar .list .nav-item .nr{font-size:12px;color:#2c3e50;font-family:Consolas,'Courier New',monospace;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar .list .nav-item .ndesc{font-size:11px;color:#999;flex:0 0 auto}
+.main{flex:1;overflow-y:auto;background:#f5f6fa}
+.main .detail{padding:30px 36px;max-width:900px}
+.main .detail .empty{text-align:center;padding:80px 20px;color:#bbb}
+.main .detail .empty h2{font-size:22px;margin-bottom:8px}
+.main .detail .empty p{font-size:14px}
+.main .detail .dh{display:flex;align-items:center;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+.main .detail .dh .mth{display:inline-block;padding:4px 14px;border-radius:5px;font-size:16px;font-weight:700;color:#fff;min-width:60px;text-align:center}
+.main .detail .dh .rt{font-size:18px;font-family:Consolas,'Courier New',monospace;color:#2c3e50}
+.main .detail .dh .dc{font-size:15px;color:#666;width:100%;margin-top:4px}
+.main .detail .note{background:#eef7ff;border-left:4px solid #2e86c1;padding:12px 16px;border-radius:4px;margin:10px 0 16px;font-size:13px;line-height:1.7;color:#1a4a6e}
+.main .detail .note code{background:#d4e6f1;padding:1px 5px;border-radius:3px;font-size:12px}
+.main .detail h4{font-size:14px;color:#1a5276;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #e0e0e0}
+.main .detail table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:4px}
+.main .detail table th,.main .detail table td{padding:7px 10px;text-align:left;border-bottom:1px solid #eee;vertical-align:top}
+.main .detail table th{background:#f8f9fa;color:#555;font-weight:600;font-size:12px}
+.main .detail table td code{background:#f0f0f0;padding:1px 5px;border-radius:3px;font-size:12px}
+.main .detail pre{background:#282c34;color:#abb2bf;padding:14px 18px;border-radius:6px;font-size:13px;overflow-x:auto;line-height:1.6;white-space:pre-wrap;word-break:break-all}
+.main .detail .err-table td:first-child{font-family:monospace;color:#e74c3c;font-weight:700}
+.main .detail .field-table td:nth-child(2){font-family:Consolas,monospace;font-size:12px;color:#7f8c8d}
+.main .detail .tag{display:inline-block;background:#e74c3c;color:#fff;padding:1px 10px;border-radius:3px;font-size:11px;font-weight:700;margin-right:6px}
+.main .detail .tag-warn{background:#f39c12}
+.main .detail .tag-info{background:#2e86c1}
+@media(max-width:768px){.wrap{flex-direction:column}.sidebar{width:100%;min-width:0;max-height:45vh}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>FOCAS2 Web API 内部文档</h1>
+  <p>发那科 FOCAS2 CNC 数据访问 REST API — 内部开发参考，点击左侧接口查看完整说明</p>
+</div>
+
+<div class="wrap">
+  <div class="sidebar">
+    <div class="search-box">
+      <input type="text" id="navSearch" placeholder="搜索接口..." autofocus>
+    </div>
+    <div class="list" id="navList"></div>
+  </div>
+  <div class="main" id="detailArea"></div>
+</div>
+
+<script>
+const APIS = [
+{
+  cat:"监控", items:[
+  {id:"ping",m:"GET",rt:"/api/focas/ping",desc:"健康检查",
+   note:'<b>用途：</b>服务连通性检测。不依赖CNC连接，服务启动即可返回。<br><b>适用场景：</b>前端心跳检测、负载均衡健康检查。<br><b>注意：</b>仅验证服务本身在线，不代表CNC可达。',
+   p:[], r:'{"Success":true,"Data":{"status":"ok","time":"14:30:00"},"ErrorCode":0}'},
+
+  {id:"sysinfo",m:"GET",rt:"/api/focas/sysinfo",desc:"CNC系统信息",
+   note:'<b>用途：</b>读取CNC型号、系统版本、轴数等基本信息。<br><b>底层调用：</b><code>cnc_sysinfo</code> — 读取CNC系统信息结构体。<br><b>适用场景：</b>设备识别、版本兼容性检查。<br><b>注意：</b>连接失败时返回ErrorCode=-16(Socket错误)。',
+   p:[],
+   r:'{"Success":true,"Data":{"Series":"D4G3","Version":"30.0","CncType":" 0","AxisCount":3},"ErrorCode":0}',
+   fields:[{n:"Series",t:"string",d:"CNC系列号，如 D4G3(0i-TF)"},{n:"Version",t:"string",d:"系统版本号，如 30.0"},{n:"CncType",t:"string",d:"CNC类型编号（字符串）"},{n:"AxisCount",t:"int",d:"控制轴数"}]},
+
+  {id:"status",m:"GET",rt:"/api/focas/status",desc:"CNC运行状态",
+   note:'<b>用途：</b>读取CNC当前工作模式、运行/停止状态、急停、伺服就绪等。<br><b>底层调用：</b><code>cnc_statinfo</code> — 读取状态信息。<br><b>关键字段解读：</b><br>— <code>Aut</code>: 自动模式标志(0=手动,1=自动,2=编辑,3=MDI,4=JOG,5=手轮,6=回零,7=DNC)<br>— <code>Run</code>: 运行状态(0=停止,1=运行中)<br>— <code>Motion</code>: 进给状态(0=停止,1=运动中)<br>— <code>Mstb</code>: 伺服就绪(0=未就绪,1=就绪)<br>— <code>Emergency</code>: 急停(0=正常,1=急停)',
+   p:[],
+   r:'{"Success":true,"Data":{"Aut":1,"Run":0,"Motion":0,"Mstb":0,"Emergency":0,"ModeName":"自动","RunStatusName":"停止"},"ErrorCode":0}',
+   fields:[{n:"Aut",t:"short",d:"工作模式码(0-7): 0=手动,1=自动,2=编辑,3=MDI,4=JOG,5=手轮,6=回零,7=DNC"},{n:"Run",t:"short",d:"0=停止,1=运行中"},{n:"Motion",t:"short",d:"进给运动状态(0=停止,1=运动中)"},{n:"Mstb",t:"short",d:"伺服就绪(0=未就绪,1=就绪)"},{n:"Emergency",t:"short",d:"急停(0=正常,1=急停)"},{n:"ModeName",t:"string",d:"模式中文名(如'自动','手动','MDI')"},{n:"RunStatusName",t:"string",d:"运行状态中文名(如'停止','运行')"}]},
+
+  {id:"monitor",m:"GET",rt:"/api/focas/monitor",desc:"综合监控（系统信息+动态+坐标+状态）",
+   note:'<b>用途：</b>一次性获取CNC全量监控数据，内部组合 <code>sysinfo</code> + <code>动态数据</code> + <code>坐标</code> + <code>状态</code> 四个请求。<br><b>适用场景：</b>监控面板/看板页面，减少请求次数。<br><b>性能：</b>串行调用4个FOCAS函数，延迟约 50-200ms。<br><b>注意：</b>任意子请求失败时，对应字段可能为 null。',
+   p:[],
+   r:'{"Success":true,"Data":{"SysInfo":{"Series":"D4G3","Version":"30.0","CncType":" 0","AxisCount":3},"Dynamic":{"MainProgram":1000,"CurrentProgram":1000,"SeqNum":0,"Alarm":0,"ActF":0,"ActS":0},"Axes":[{"Name":"X","Absolute":-17.6,"Machine":0.0,"Relative":0.0,"Distance":0.0},{"Name":"Y","Absolute":0.0,"Machine":0.0,"Relative":0.0,"Distance":0.0},{"Name":"Z","Absolute":0.0,"Machine":0.0,"Relative":0.0,"Distance":0.0}],"Status":{"Aut":1,"Run":0,"Motion":0,"Mstb":0,"Emergency":0,"ModeName":"自动","RunStatusName":"停止"}},"ErrorCode":0}',
+   fields:[{n:"SysInfo",t:"object",d:"系统信息(同sysinfo接口)"},{n:"Dynamic",t:"object",d:"动态数据: MainProgram(主程序号), CurrentProgram(当前程序号), SeqNum(当前行号), Alarm(报警状态), ActF(实际进给速度), ActS(实际主轴转速)"},{n:"Axes",t:"array",d:"各轴坐标: Name(轴名), Absolute(绝对坐标), Machine(机床坐标), Relative(相对坐标), Distance(余量)"},{n:"Status",t:"object",d:"运行状态(同status接口)"}]},
+
+  {id:"alarm",m:"GET",rt:"/api/focas/alarm",desc:"读取CNC当前报警",
+   note:'<b>用途：</b>读取CNC当前激活的全部报警信息，最多返回10条。<br><b>底层调用：</b><code>cnc_alarm2 + cnc_rdalarm</code><br><b>报警类型码(Type)：</b><br>— 0 = PS (程序/语法错误)<br>— 1 = OT (超程)<br>— 2 = SV (伺服报警)<br>— 3 = IO (I/O报警)<br>— 4 = PS2 (宏程序/用户宏报警)<br>— 6 = SV (扩展伺服)<br><b>适用场景：</b>异常监控、设备调试、自动启动前的安全检查。',
+   p:[],
+   r:'{"Success":true,"Data":{"DynamicAlarmCode":8,"AlarmStatus":0,"HasAlarm":true,"Alarms":[{"Number":8,"Type":6,"TypeName":"SV","Axis":0,"Message":"SERVO ALARM","MessageLength":11}],"DetailError":"0","DetailErrorInfo":"err_no=0 err_dtno=0"},"ErrorCode":0}',
+   fields:[{n:"DynamicAlarmCode",t:"int",d:"动态报警码(0=无报警)"},{n:"AlarmStatus",t:"int",d:"报警状态标志"},{n:"HasAlarm",t:"bool",d:"是否有报警"},{n:"Alarms",t:"array",d:"报警列表(最多10条)"},{n:"→ Number",t:"short",d:"报警号"},{n:"→ Type",t:"short",d:"报警类型码 0=PS 1=OT 2=SV 3=IO 4=PS2 6=SV"},{n:"→ TypeName",t:"string",d:"类型名(PS/OT/SV/IO/PS2)"},{n:"→ Axis",t:"short",d:"关联轴号(0=无关联)"},{n:"→ Message",t:"string",d:"报警文本"},{n:"→ MessageLength",t:"short",d:"报警文本长度"},{n:"DetailError",t:"string",d:"详细错误码(字符串)"},{n:"DetailErrorInfo",t:"string",d:"详细错误诊断信息"}]},
+
+  {id:"start",m:"POST",rt:"/api/focas/start",desc:"循环启动（需MEM/MDI模式）",
+   note:'<b>用途：</b>发送循环启动(cycle start)指令给CNC。<br><b>底层调用：</b><code>cnc_start</code><br><b>前提条件：</b>CNC必须在MEM(自动)或MDI模式，且程序已选择/搜索。<br><b>返回错误码12：</b>当前模式不支持循环启动，请切换到MEM/MDI。<br><b>适用场景：</b>自动化产线远程启动、配合run/autostart使用。',
+   p:[],
+   r:'{"Success":true,"Data":null,"ErrorCode":0}'},
+
+  {id:"reset",m:"POST",rt:"/api/focas/reset",desc:"复位/停止CNC",
+   note:'<b>用途：</b>发送复位(reset)指令给CNC，停止正在执行的程序。<br><b>底层调用：</b><code>cnc_reset</code><br><b>效果：</b>CNC立即停止运动、取消当前选择程序（部分CNC机型）。<br><b>与急停区别：</b>复位是软件指令，急停是硬件信号。复位后可立即操作，急停需手动复位急停按钮。<br><b>适用场景：</b>异常停止、安全保护、程序切换前的清理。',
+   p:[],
+   r:'{"Success":true,"Data":null,"ErrorCode":0}'},
+
+  {id:"clearalarm",m:"POST",rt:"/api/focas/alarm/clear",desc:"清除CNC当前报警",
+       note:'<b>用途：</b>清除CNC当前报警状态。<br><b>底层调用：</b>通过状态复位清除报警。<br><b>注意：</b>仅可清除软件报警(PS等)，硬件报警(如急停、伺服过载)需要物理排除故障。<br><b>适用场景：</b>远程复位软件报警、自动化流程中的异常恢复步骤。',
+       p:[],
+       r:'{"Success":true,"Data":null,"ErrorCode":0}'},
+
+      {id:"override",m:"GET",rt:"/api/focas/override",desc:"操作面板倍率信号（进给/主轴/快移/JOG倍率）",
+       note:'<b>用途：</b>通过一次FOCAS调用(<code>cnc_rdopnlsgnl</code>)读取操作面板上全部的倍率旋钮设定值和状态信号。<br><b>关键字段：</b><br>— <code>FeedOvrd</code>: 进给倍率旋钮位置(%)，如 100=100%<br>— <code>SpdlOvrd</code>: 主轴倍率(%)。⚠️ 仅FS15D编译版本有效，非FS15D机型该字段可能无意义，可通过PMC地址读取替代<br>— <code>RpdOvrd</code>: 快移倍率(G00速度)，典型值 0/25/50/100(%)<br>— <code>JogOvrd</code>: 手动/JOG进给倍率(%)<br>— <code>FeedHold</code>: 进给保持状态(0=正常,1=保持中)<br>— <code>DryRun</code>: 空运行(0=关,1=开)<br>— <code>SnglBlck</code>: 单段执行(0=关,1=开)<br>— <code>BlkDel</code>: 跳段(0=执行,1=跳过)<br><b>适用场景：</b>监控面板实时显示倍率值、设备状态监测。<br><b>注意：</b>FocasSimulator返回的倍率值可能不真实，实际CNC上才有意义。',
+       p:[],
+       r:'{"Success":true,"Data":{"FeedOvrd":100,"SpdlOvrd":100,"RpdOvrd":100,"JogOvrd":100,"Mode":0,"BlkDel":0,"SnglBlck":0,"MachLock":0,"DryRun":0,"FeedHold":0},"ErrorCode":0}',
+       fields:[{n:"FeedOvrd",t:"short",d:"进给倍率(%)，如 100=100%"},{n:"SpdlOvrd",t:"short",d:"主轴倍率(%)，仅FS15D机型有效"},{n:"RpdOvrd",t:"short",d:"快移倍率(%)，典型值 0/25/50/100"},{n:"JogOvrd",t:"short",d:"手动JOG倍率(%)"},{n:"Mode",t:"short",d:"操作模式信号(原始值)"},{n:"BlkDel",t:"short",d:"跳段 0=执行,1=跳过"},{n:"SnglBlck",t:"short",d:"单段 0=关闭,1=开启"},{n:"MachLock",t:"short",d:"机床锁住 0=正常,1=锁住"},{n:"DryRun",t:"short",d:"空运行 0=关闭,1=开启"},{n:"FeedHold",t:"short",d:"进给保持 0=正常,1=保持中"}]}
+   ]},
+{
+  cat:"程序管理", items:[
+  {id:"proglist",m:"GET",rt:"/api/focas/programs",desc:"NC程序列表",
+   note:'<b>用途：</b>读取CNC存储器中全部的NC程序列表。<br><b>底层调用：</b><code>cnc_program_all</code><br><b>数据量：</b>返回所有程序的基本信息(程序号/注释/长度)，不含程序内容。<br><b>适用场景：</b>设备程序清单查看、选择程序运行、上传前检查程序号冲突。',
+   p:[],
+   r:'{"Success":true,"Data":[{"Number":"O0001","ProgNum":1,"Comment":"","Length":120},{"Number":"O1000","ProgNum":1000,"Comment":"MAIN","Length":256}],"ErrorCode":0}',
+   fields:[{n:"Number",t:"string",d:"程序号字符串，如 O0001"},{n:"ProgNum",t:"short",d:"程序号数值"},{n:"Comment",t:"string",d:"程序注释(部分CNC可能为空)"},{n:"Length",t:"int",d:"程序长度(字符数)"}]},
+
+  {id:"progread",m:"GET",rt:"/api/focas/programs/{progNum}",desc:"读取程序内容",
+   note:'<b>用途：</b>读取指定NC程序的完整源代码。<br><b>底层调用：</b><code>cnc_rdprogram</code><br><b>程序号范围：</b>取决于CNC型号，一般 O0001-O9999。<br><b>适用场景：</b>程序查看/编辑、程序备份、程序分析。<br><b>注意：</b>程序内容不含O号开头行(由系统自动管理)。',
+   p:[{n:"progNum",t:"short",d:"程序号（路径参数）",def:""}],
+   r:'{"Success":true,"Data":{"ProgNum":1,"Number":"O0001","Content":"O0001;\\nG91 G01 X100.;\\n","LineCount":2},"ErrorCode":0}',
+   fields:[{n:"ProgNum",t:"short",d:"程序号"},{n:"Number",t:"string",d:"程序号字符串"},{n:"Content",t:"string",d:"程序完整源代码文本"},{n:"LineCount",t:"int",d:"程序行数"}]},
+
+  {id:"proup",m:"PUT",rt:"/api/focas/programs",desc:"上传程序到CNC",
+   note:'<b>用途：</b>将NC程序写入CNC存储器。程序号已存在则覆盖。<br><b>底层调用：</b><code>cnc_uploadex</code> 或 <code>cnc_upstart+cnc_upend</code><br><b>请求体(JSON Body)：</b><br><code>{"progNum": 9000, "content": "O9000;\\nM30;"}</code><br><b>注意事项：</b><br>— content 不含 % 起始结束行<br>— 程序号必须 > 0<br>— 大程序建议分段上传(单次上限约32KB)<br>— 部分CNC限制了程序数量上限<br><b>返回400：</b>progNum <= 0 或 body 为空时返回 "无效的请求：需要 progNum 和 content"。',
+   p:[{n:"progNum",t:"short",d:"程序号"},{n:"content",t:"string",d:"程序内容（不含 O 头和 % 行）"}],
+   req:'{"progNum":9000,"content":"O9000;\\n#1=50.0;\\nM30;"}',
+   r:'{"Success":true,"Data":null,"ErrorCode":0}'},
+
+  {id:"progdel",m:"DELETE",rt:"/api/focas/programs/{progNum}",desc:"删除NC程序",
+   note:'<b>用途：</b>从CNC存储器中删除指定程序。<br><b>底层调用：</b><code>cnc_delete</code><br><b>适用场景：</b>清理旧程序、重新上传前删除。<br><b>注意：</b>删除正在运行的程序可能导致CNC报警。建议先确认程序不在执行中。',
+   p:[{n:"progNum",t:"short",d:"程序号（路径参数）",def:""}],
+   r:'{"Success":true,"Data":null,"ErrorCode":0}'},
+
+  {id:"actpt",m:"GET",rt:"/api/focas/programs/actpt",desc:"活动程序指针（当前执行块）",
+   note:'<b>用途：</b>获取当前正在执行的程序号和块号(行号)。<br><b>底层调用：</b><code>cnc_rdactpt</code><br><b>适用场景：</b>监控程序执行进度、确定当前加工位置。<br><b>注意：</b>CNC停止时返回最后执行的块号。',
+   p:[],
+   r:'{"Success":true,"Data":{"ProgNo":1,"BlkNo":10},"ErrorCode":0}',
+   fields:[{n:"ProgNo",t:"int",d:"当前执行程序号"},{n:"BlkNo",t:"int",d:"当前执行块号/行号"}]},
+
+  {id:"run",m:"POST",rt:"/api/focas/programs/{progNum}/run",desc:"自动运行（搜索+启动）",
+   note:'<b>用途：</b>搜索指定程序并启动循环运行。<br><b>底层调用：</b><code>cnc_search</code> + <code>cnc_start</code><br><b>执行步骤：</b>1)状态检查 → 2)读取当前程序 → 3)模式检查 → 4)搜索程序 → 5)启动运行<br><b>前提条件：</b>CNC必须在MEM模式，无报警。<br><b>与autostart的区别：</b>run不做复位和报警检查，更快但不够安全。<br><b>适用场景：</b>确认CNC状态正常的快速启动。',
+   p:[{n:"progNum",t:"short",d:"程序号（路径参数）",def:""}],
+   r:'{"Success":true,"Data":{"ProgNum":1000,"Number":"O1000","PreviousProgram":2000,"Mode":"自动","StepsCompleted":["check","read_current","mode_check","search","start"],"StartedAt":"2026-06-10 08:28:53"},"ErrorCode":0}',
+   fields:[{n:"ProgNum",t:"short",d:"启动的程序号"},{n:"Number",t:"string",d:"程序号字符串"},{n:"PreviousProgram",t:"int",d:"启动前的程序号"},{n:"Mode",t:"string",d:"CNC当前模式"},{n:"StepsCompleted",t:"array",d:"完成的步骤列表：check,read_current,mode_check,search,start"},{n:"StartedAt",t:"string",d:"启动时间 yyyy-MM-dd HH:mm:ss"}]},
+
+  {id:"autostart",m:"POST",rt:"/api/focas/programs/{progNum}/autostart",desc:"安全自动启动（复位+清报警+搜索+启动）",
+   note:'<b>用途：</b>带安全检查的自动运行——先复位、检查报警、再搜索启动。<br><b>执行步骤：</b>1)状态检查 → 2)模式检查 → 3)急停检查 → 4)复位 → 5)报警检查(复位前后对比) → 6)搜索程序 → 7)启动运行<br><b>与run的区别：</b><br>— autostart 会先复位(停止当前程序)<br>— autostart 会检查并记录复位前后的报警状态<br>— autostart 返回 WasReset 标志<br><b>适合场景：</b>无人值守、自动产线的程序切换，安全性更高。<br><b>注意：</b>复位会停止CNC当前正在执行的任何程序。',
+   p:[{n:"progNum",t:"short",d:"程序号（路径参数）",def:""}],
+   r:'{"Success":true,"Data":{"ProgNum":1000,"Number":"O1000","PreviousProgram":2000,"Mode":"自动","AlarmBeforeReset":0,"AlarmAfterReset":0,"WasReset":true,"StepsCompleted":["status_check","mode_check","emergency_check","reset","alarm_check","search","start"],"StartedAt":"2026-06-10 08:30:00"},"ErrorCode":0}',
+   fields:[{n:"ProgNum",t:"short",d:"启动的程序号"},{n:"Number",t:"string",d:"程序号字符串"},{n:"PreviousProgram",t:"int",d:"启动前的程序号"},{n:"Mode",t:"string",d:"CNC当前模式"},{n:"AlarmBeforeReset",t:"int",d:"复位前报警码"},{n:"AlarmAfterReset",t:"int",d:"复位后报警码"},{n:"WasReset",t:"bool",d:"是否执行了复位操作"},{n:"StepsCompleted",t:"array",d:"完成的步骤：status_check,mode_check,emergency_check,reset,alarm_check,search,start"},{n:"StartedAt",t:"string",d:"启动时间"}]}
+]},
+{
+  cat:"宏变量", items:[
+  {id:"macrodetail",m:"GET",rt:"/api/focas/macros",desc:"批量读取宏变量（连续范围）",
+   note:'<b>用途：</b>按连续范围批量读取用户宏变量 #100-#999 中的值。<br><b>底层调用：</b><code>cnc_rdmacror2</code> (单次最多100个，超出自动分段)<br><b>参数说明：</b><br>— <code>start</code>: 起始变量号（建议 100-999 范围内）<br>— <code>count</code>: 读取个数，最大 999，超出范围自动截断<br><b>返回的 Values 字典：</b><br>— key 为变量号字符串<br>— value 为 double?，未设定的变量返回 null<br><b>适用场景：</b>批量采集宏变量数据（如刀具寿命、工件计数）。',
+   p:[{n:"start",t:"int",d:"起始变量号",def:"100"},{n:"count",t:"int",d:"读取数量(自动分段单次上限100)",def:"1"}],
+   r:'{"Success":true,"Data":{"Start":100,"Count":10,"ActualCount":10,"Values":{"100":null,"101":null,"102":12.5}},"ErrorCode":0}',
+   fields:[{n:"Start",t:"int",d:"请求的起始变量号"},{n:"Count",t:"int",d:"请求的读取数量"},{n:"ActualCount",t:"int",d:"实际返回数量(可能少于请求)"},{n:"Values",t:"object",d:"字典: key=变量号(string), value=数值(double?)或null(未设定)"}]},
+
+  {id:"macrobatch",m:"POST",rt:"/api/focas/macros/batch",desc:"批量读取宏变量（非连续多点）",
+   note:'<b>用途：</b>通过指定变量号列表，读取非连续的多个宏变量值。<br><b>底层调用：</b>逐个调用 <code>cnc_rdmacror2</code> 读取。<br><b>请求体：</b>JSON数组 <code>[100, 105, 200, 500]</code><br><b>适用场景：</b>只需要特定几个宏变量的值时，避免大量无用的连续读取。<br><b>注意：</b>数量过多时响应较慢（每个变量独立调用FOCAS函数）。建议单次不超过50个。',
+   p:[{n:"body",t:"int[]",d:"变量号列表(JSON数组)"}],
+   req:'[100, 105, 200, 500]',
+   r:'{"Success":true,"Data":{"Start":100,"Count":4,"ActualCount":4,"Values":{"100":null,"105":25.0,"200":0.0,"500":1.5}},"ErrorCode":0}',
+   fields:[{n:"Start",t:"int",d:"最小请求变量号"},{n:"Count",t:"int",d:"请求数量"},{n:"ActualCount",t:"int",d:"实际返回数量"},{n:"Values",t:"object",d:"字典: key=变量号, value=数值或null"}]},
+
+  {id:"macroget",m:"GET",rt:"/api/focas/macros/user/{macroNum}",desc:"读取单个用户宏变量",
+   note:'<b>用途：</b>读取单个用户宏变量 # (100-999)。<br><b>底层调用：</b><code>cnc_rdmacror2</code><br><b>返回的额外字段：</b><br>— <code>DecVal</code>: 小数点位数(如 6 表示保留6位小数)<br>— <code>RawVal</code>: 原始整数值(Value * 10^DecVal)<br><b>适用场景：</b>读取单个已知变量号的值，需要获取小数位信息时。',
+   p:[{n:"macroNum",t:"int",d:"宏变量号（路径参数）",def:""}],
+   r:'{"Success":true,"Data":{"Number":500,"Value":123.456,"DecVal":6,"RawVal":123456000},"ErrorCode":0}',
+   fields:[{n:"Number",t:"int",d:"宏变量号"},{n:"Value",t:"double",d:"浮点数值"},{n:"DecVal",t:"int",d:"小数点位数"},{n:"RawVal",t:"int",d:"原始整数值(Value × 10^DecVal)"}]},
+
+  {id:"macroput",m:"PUT",rt:"/api/focas/macros/user",desc:"写入用户宏变量",
+   note:'<b>用途：</b>写入用户宏变量 # 的值(100-999)。<br><b>底层调用：</b><code>cnc_wpmacror</code><br><b>请求体：</b><code>{"number": 500, "value": 123.456}</code><br><b>注意：</b>写入浮点数时CNC自动根据参数设置决定小数位数。<br><b>适用场景：</b>设定刀具补偿、工件偏置、计数器等宏变量。<br><b>返回错误：</b>变量号超出范围返回ErrorCode=3。',
+   p:[{n:"number",t:"int",d:"宏变量号"},{n:"value",t:"double",d:"要写入的值"}],
+   req:'{"number":500,"value":123.456}',
+   r:'{"Success":true,"Data":null,"ErrorCode":0}'},
+
+  {id:"pcoget",m:"GET",rt:"/api/focas/macros/pcode/{macroNum}",desc:"读取P代码宏变量",
+   note:'<b>用途：</b>读取P代码宏变量(通常 10000-19999 范围)。<br><b>底层调用：</b><code>cnc_rdmacror2</code> (类型参数不同)<br><b>与用户宏变量的区别：</b>P代码宏变量是系统级/参数级变量，存储CNC参数映像。<br><b>适用场景：</b>读取系统参数对应的宏变量映像。',
+   p:[{n:"macroNum",t:"int",d:"宏变量号（路径参数）",def:""}],
+   r:'{"Success":true,"Data":{"Number":10000,"Value":50.0,"DecVal":0,"RawVal":50},"ErrorCode":0}',
+   fields:[{n:"Number",t:"int",d:"宏变量号"},{n:"Value",t:"double",d:"值"},{n:"DecVal",t:"int",d:"小数点位数"},{n:"RawVal",t:"int",d:"原始整数值"}]},
+
+  {id:"pcoput",m:"PUT",rt:"/api/focas/macros/pcode",desc:"写入P代码宏变量",
+   note:'<b>用途：</b>写入P代码宏变量值。<br><b>底层调用：</b><code>cnc_wpmacror</code><br><b>注意：</b>部分P代码宏变量为只读，写入可能返回错误码 7(写保护)。<br><b>适用场景：</b>修改系统参数映像值。',
+   p:[{n:"number",t:"int",d:"宏变量号"},{n:"value",t:"double",d:"要写入的值"}],
+   req:'{"number":10000,"value":50}',
+   r:'{"Success":true,"Data":null,"ErrorCode":0}'}
+]},
+{
+  cat:"PMC/PLC", items:[
+  {id:"pmcread",m:"GET",rt:"/api/focas/pmc",desc:"批量读取PMC（连续范围）",
+   note:'<b>用途：</b>按连续地址范围批量读取PMC地址值(字节或位)。<br><b>底层调用：</b><code>pmc_rdpmcrng</code><br><b>地址类型(type)支持：</b><br>— <b>G</b>: 内部继电器(Group) — CNC←PMC信号<br>— <b>F</b>: 来自CNC的信号(from CNC) — CNC→PMC信号<br>— <b>Y</b>: 输出到机床(输出口)<br>— <b>X</b>: 来自机床的输入(输入口)<br>— <b>A</b>: 断电保持继电器<br>— <b>R</b>: 内部继电器<br>— <b>T</b>: 定时器<br>— <b>K</b>: 保持继电器<br>— <b>C</b>: 计数器<br>— <b>D</b>: 数据表<br>— <b>E</b>: 扩展数据表<br><b>位模式(startBit≥0) vs 字节模式(startBit=-1)：</b><br>— 字节模式返回整数0-255<br>— 位模式返回0或1<br><b>注意：</b>地址类型必须为单字符，否则返回400错误。',
+   p:[{n:"type",t:"string",d:"地址类型: G/F/Y/X/A/R/T/K/C/D/E",def:"G"},{n:"start",t:"int",d:"起始地址偏移",def:"0"},{n:"count",t:"int",d:"读取数量",def:"1"},{n:"startBit",t:"int",d:"起始位号0-7(-1=byte模式)",def:"-1"}],
+   r:'{"Success":true,"Data":{"Type":"G","Start":0,"StartBit":-1,"Count":5,"Values":[0,0,4,8,0]},"ErrorCode":0}',
+   fields:[{n:"Type",t:"string",d:"地址类型字符"},{n:"Start",t:"int",d:"起始地址"},{n:"StartBit",t:"int",d:"-1=字节模式, 0-7=位模式"},{n:"Count",t:"int",d:"读取数量"},{n:"Values",t:"array",d:"值列表(字节模式0-255, 位模式0或1)"}]},
+
+  {id:"pmcbatch",m:"POST",rt:"/api/focas/pmc/batch",desc:"批量读取PMC（非连续多点）",
+   note:'<b>用途：</b>通过地址字符串列表(如 "G0.3", "D100")读取多个不连续的PMC地址。<br><b>底层调用：</b>逐个解析地址并调用 <code>pmc_rdpmcrng</code>。<br><b>请求体：</b><code>["G0.3", "G2.0", "D100", "X1.0"]</code><br><b>地址格式：</b><br>— "G0.3" = G类型, 地址0, 第3位<br>— "D100" = D类型, 地址100, 字节模式<br>— "X1.0" = X类型, 地址1, 第0位<br><b>适用场景：</b>需要读取特定IO点、定时器值、计数器值等。<br><b>注意：</b>地址字符串不区分大小写。',
+   p:[],
+   req:'["G0.3", "G2.0", "D100", "X1.0"]',
+   r:'{"Success":true,"Data":{"Values":{"G0.3":0,"G2.0":1,"D100":42,"X1.0":1}},"ErrorCode":0}',
+   fields:[{n:"Values",t:"object",d:"字典: key=地址字符串, value=数值(字节0-255 或 位0/1)"}]},
+
+  {id:"pmcget",m:"GET",rt:"/api/focas/pmc/{type}/{addr}",desc:"读取单个PMC（数字类型码）",
+   note:'<b>用途：</b>通过数字类型码读取单个PMC地址值。<br><b>类型码映射：</b><br>0=G, 1=F, 2=Y, 3=X, 4=A, 5=R, 6=T, 7=K, 8=C, 9=D, 10=E<br><b>适用场景：</b>程序内部使用数字码更方便时。<br><b>注意：</b>此接口使用数字类型码(short)，与pmc GET(字符)不同。',
+   p:[{n:"type",t:"short",d:"0=G 1=F 2=Y 3=X 4=A 5=R 6=T 7=K 8=C 9=D 10=E（路径参数）"},{n:"addr",t:"ushort",d:"地址号（路径参数）"},{n:"bit",t:"int",d:"位索引0-7(-1=字节)",def:"-1"}],
+   r:'{"Success":true,"Data":{"AddressType":0,"AddressNum":100,"ByteValue":255,"HexValue":"0xFF","BitValue":-1,"BitIndex":-1},"ErrorCode":0}',
+   fields:[{n:"AddressType",t:"short",d:"地址类型码(0-10)"},{n:"AddressNum",t:"ushort",d:"地址号"},{n:"ByteValue",t:"byte",d:"字节值(0-255)"},{n:"HexValue",t:"string",d:"十六进制字符串"},{n:"BitValue",t:"int",d:"位值(0/1), -1=字节模式"},{n:"BitIndex",t:"int",d:"位索引, -1=字节模式"}]},
+
+  {id:"pmcput",m:"PUT",rt:"/api/focas/pmc",desc:"写入PMC/PLC地址",
+   note:'<b>用途：</b>写入PMC/PLC地址值(字节或位)。<br><b>底层调用：</b><code>pmc_wrpmcrng</code><br><b>请求体：</b><code>{"addressType":0,"addressNum":100,"value":1,"bitIndex":0}</code><br><b>写入模式：</b><br>— bitIndex=-1: 字节写入(0-255)<br>— bitIndex=0-7: 位写入(0或1)<br><b>注意：</b><br>— 部分地址为只读(如 X 输入地址)<br>— 写保护返回错误码 7<br>— 写入F地址可能影响CNC行为，谨慎操作',
+   p:[{n:"addressType",t:"short",d:"0=G 1=F 2=Y 3=X 4=A 5=R 6=T 7=K 8=C 9=D 10=E"},{n:"addressNum",t:"ushort",d:"地址号"},{n:"value",t:"int",d:"值(位:0/1, 字节:0-255)"},{n:"bitIndex",t:"int",d:"位索引(-1=字节)",def:"-1"}],
+   req:'{"addressType":0,"addressNum":100,"value":1,"bitIndex":0}',
+   r:'{"Success":true,"Data":null,"ErrorCode":0}'},
+
+  {id:"plcget",m:"GET",rt:"/api/focas/plc/{type}/{addr}",desc:"读取单个PLC（旧接口兼容）",
+   note:'<b>用途：</b>旧版兼容接口，逻辑与 <code>/api/focas/pmc/{type}/{addr}</code> 完全相同。<br><b>说明：</b>两个路由前缀并存：<br>— <code>/api/focas/pmc/*</code> (新接口)<br>— <code>/api/focas/plc/*</code> (本接口，旧版兼容)<br><b>建议：</b>新开发优先使用 <code>/api/focas/pmc/</code> 系列接口。',
+   p:[{n:"type",t:"short",d:"地址类型码 0=G 1=F...(路径参数)"},{n:"addr",t:"ushort",d:"地址号(路径参数)"},{n:"bit",t:"int",d:"位索引0-7(-1=字节)",def:"-1"}],
+   r:'{"Success":true,"Data":{"AddressType":0,"AddressNum":100,"ByteValue":255,"HexValue":"0xFF","BitValue":-1,"BitIndex":-1},"ErrorCode":0}',
+   fields:[{n:"AddressType",t:"short",d:"地址类型码"},{n:"AddressNum",t:"ushort",d:"地址号"},{n:"ByteValue",t:"byte",d:"字节值"},{n:"HexValue",t:"string",d:"十六进制"},{n:"BitValue",t:"int",d:"位值"},{n:"BitIndex",t:"int",d:"位索引"}]},
+
+  {id:"plcput",m:"PUT",rt:"/api/focas/plc",desc:"写入PLC地址（旧接口兼容）",
+   note:'<b>用途：</b>旧版兼容接口，逻辑与 <code>PUT /api/focas/pmc</code> 完全相同。<br><b>说明：</b>两个路由前缀并存。建议新开发使用 <code>/api/focas/pmc</code> 系列。',
+   p:[{n:"addressType",t:"short",d:"地址类型码"},{n:"addressNum",t:"ushort",d:"地址号"},{n:"value",t:"int",d:"值(位:0/1 字节:0-255)"},{n:"bitIndex",t:"int",d:"位索引(-1=字节)",def:"-1"}],
+   req:'{"addressType":0,"addressNum":100,"value":1,"bitIndex":0}',
+   r:'{"Success":true,"Data":null,"ErrorCode":0}'}
+]},
+{
+  cat:"CNC参数", items:[
+  {id:"paramget",m:"GET",rt:"/api/focas/parameters/{paramNum}",desc:"读取CNC参数",
+   note:'<b>用途：</b>读取CNC参数值。参数号范围为CNC型号决定，通常 0-99999。<br><b>底层调用：</b><code>cnc_rdparam</code><br><b>返回值类型说明：</b><br>— <b>Type</b>: 参数数据类型(0=位/L型, 1=整型, 2=字节/实数字)<br>— <b>LData</b>: 长整型值(适用于Type=0)<br>— <b>IData</b>: 短整型值(适用于Type=1)<br>— <b>CData</b>: 字节值(适用于Type=2)<br><b>适用场景：</b>读取CNC参数配置，如轴参数、伺服参数等。<br><b>注意：</b>部分参数需要密码保护才能读取。',
+   p:[{n:"paramNum",t:"int",d:"参数号（路径参数）",def:""}],
+   r:'{"Success":true,"Data":{"ParamNum":1,"Type":0,"LData":0,"IData":0,"CData":0},"ErrorCode":0}',
+   fields:[{n:"ParamNum",t:"int",d:"参数号"},{n:"Type",t:"short",d:"数据类型: 0=位/长整型, 1=整型, 2=字节"},{n:"LData",t:"long",d:"长整型值(Type=0)"},{n:"IData",t:"short",d:"整型值(Type=1)"},{n:"CData",t:"byte",d:"字节值(Type=2)"}]},
+
+  {id:"paramput",m:"PUT",rt:"/api/focas/parameters",desc:"写入CNC参数",
+   note:'<b>用途：</b>写入CNC参数值(字节级)。<br><b>底层调用：</b><code>cnc_wrparam</code><br><b>请求体：</b><code>{"paramNum":1,"value":0}</code><br><b>注意：</b><br>— 仅写入字节级值(CData)<br>— 部分参数需要参数写保护开关(PWE=1)<br>— 修改关键参数可能导致CNC异常，请谨慎操作<br>— 部分系统参数修改后需要断电重启<br><b>适用场景：</b>参数配置、调试时修改参数。',
+   p:[{n:"paramNum",t:"int",d:"参数号"},{n:"value",t:"long",d:"要写入的值"}],
+   req:'{"paramNum":1,"value":0}',
+   r:'{"Success":true,"Data":null,"ErrorCode":0}'}
+]},
+{
+  cat:"公共参数与错误码", items:[
+  {id:"commonparams",m:"",rt:"",desc:"通用说明",
+   note:'<b>响应格式：</b><br>所有接口返回 JSON 格式，外层的统一包装结构：<br><br><code>{"Success": bool, "Data": T, "ErrorCode": short, "ErrorMsg": string}</code><br><br>— <b>Success</b>: true=成功, false=失败<br>— <b>Data</b>: 业务数据，失败时为 null<br>— <b>ErrorCode</b>: FOCAS 错误码，0=正常<br>— <b>ErrorMsg</b>: 错误描述（失败时）<br><br><b>连接管理说明：</b><br>服务为单实例，固定连接 127.0.0.1:8193，无需指定连接参数。内部实现了连接池 + 100ms 缓存机制，连续请求间复用连接。缓存命中时不发起网络请求。'},
+  {id:"errors",m:"",rt:"",desc:"错误码参考表",
+   errs:[["0","正常 (EW_OK)"],["-1","CNC忙 (EW_BUSY) — 等待上一请求完成"],["-2","复位/停止 (EW_RESET) — CNC正在复位"],["-7","版本不匹配 — FOCAS库版本与CNC系统版本不一致"],["-8","Handle无效 — 连接句柄已失效，需重新连接"],["-16","Socket连接失败 — CNC不可达(/网络不通/IP错误/端口错误)"],["1","功能不支持 / PMC不存在 — CNC未开通该功能"],["2","数据长度错误 — 请求参数长度错误"],["3","变量号超出范围 — 宏变量号不在可用范围"],["4","数据类型错误 — 参数类型不匹配"],["5","数据错误 (EW_DATA) — 读取/写入的数据异常"],["6","功能未开通 (EW_NOOPT) — CNC未授权此功能选项"],["7","写保护 — 地址或参数为只读"],["12","模式错误 — 需切换至MEM或MDI模式后操作"],["-99","服务端内部异常 — C#异常，查看日志获取详细信息"]]}
+]},
+];
+
+function flatItems(){const a=[];APIS.forEach(c=>c.items.forEach(i=>a.push({cat:c.cat,item:i})));return a}
+let flat = flatItems();
+let activeId = null;
+
+function renderNav(q){
+  const nav = document.getElementById('navList');
+  q = (q||'').toLowerCase().trim();
+  nav.innerHTML = '';
+  APIS.forEach(cat=>{
+    const filtered = cat.items.filter(i=>!q||i.m.toLowerCase().indexOf(q)!== -1||i.rt.toLowerCase().indexOf(q)!== -1||i.desc.toLowerCase().indexOf(q)!== -1);
+    if(q&&!filtered.length)return;
+    nav.innerHTML += `<div class="cat-label">${esc(cat.cat)}</div>`;
+    filtered.forEach(i=>{
+      nav.innerHTML += `<div class="nav-item${i.id===activeId?' active':''}" data-id="${i.id}" onclick="showDetail('${i.id}')">
+        <span class="nm nm-${i.m||'GET'}">${i.m||'?'}</span>
+        <span class="nr">${i.rt||(i.errs?'参考表':'')}</span>
+        <span class="ndesc">${esc(i.desc)}</span>
+      </div>`;
+    });
+  });
+  if(!activeId&&flat.length)showDetail(flat[0].item.id);
+}
+function showDetail(id){
+  activeId=id;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
+  const found = flat.find(f=>f.item.id===id);
+  const d = document.getElementById('detailArea');
+  if(!found){d.innerHTML='<div class="detail"><div class="empty"><h2>选择左侧接口</h2><p>点击左侧导航栏中的接口查看详情</p></div></div>';return}
+  const api=found.item;
+  let html='<div class="detail">';
+  html+=`<div class="dh"><span class="mth mth-${api.m||'GET'}">${api.m||'参考'}</span><span class="rt">${esc(api.rt||'')}</span><span class="dc">${esc(api.desc)}</span></div>`;
+  if(api.note) html+=`<div class="note">${api.note}</div>`;
+  if(api.p&&api.p.length){
+    html+='<h4>请求参数</h4><table><tr><th>参数</th><th>类型</th><th>说明</th><th>默认</th></tr>';
+    api.p.forEach(p=>{html+=`<tr><td><code>${esc(p.n)}</code></td><td>${esc(p.t)}</td><td>${esc(p.d)}</td><td>${p.def?esc(p.def):'-'}</td></tr>`});
+    html+='</table>';
+  }
+  if(api.fields&&api.fields.length){
+    html+='<h4>响应字段说明</h4><table class="field-table"><tr><th>字段</th><th>类型</th><th>说明</th></tr>';
+    api.fields.forEach(f=>{html+=`<tr><td><code>${esc(f.n)}</code></td><td>${esc(f.t)}</td><td>${esc(f.d)}</td></tr>`});
+    html+='</table>';
+  }
+  if(api.req){html+='<h4>请求示例 (JSON Body)</h4><pre>'+esc(api.req)+'</pre>'}
+  if(api.r){html+='<h4>响应示例</h4><pre>'+esc(api.r)+'</pre>'}
+  if(api.errs){
+    html+='<h4>错误码</h4><table class="err-table"><tr><th>值</th><th>说明</th></tr>';
+    api.errs.forEach(e=>{html+=`<tr><td>${e[0]}</td><td>${e[1]}</td></tr>`});
+    html+='</table>';
+  }
+  html+='</div>';
+  d.innerHTML=html;
+  // 渲染 note 中的表格
+  d.querySelectorAll('.note table').forEach(t=>{
+    if(!t.classList.contains('field-table')) t.style.width='100%';
+    t.style.fontSize='13px';
+    t.style.borderCollapse='collapse';
+    t.querySelectorAll('th, td').forEach(c=>{c.style.padding='5px 8px';c.style.border='1px solid #d4e6f1';c.style.textAlign='left'});
+    t.querySelectorAll('th').forEach(c=>{c.style.background='#d4e6f1';c.style.fontWeight='600'});
+  });
+}
+function esc(s){if(!s)return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+document.getElementById('navSearch').addEventListener('input',e=>renderNav(e.target.value));
+renderNav('');
+</script>
+</body>
+</html>

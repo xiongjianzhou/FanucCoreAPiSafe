@@ -1,0 +1,16 @@
+# Compiled binary
+focaswebapi
+
+# FOCAS log
+fwlibeth.log
+
+# Build output
+*.o
+obj/
+bin/
+
+# IDE
+.vs/
+.idea/
+*.swp
+*.swo

@@ -1,0 +1,216 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "FOCAS2 Web API",
+    "description": "FANUC CNC Data Access REST API (Linux/C)",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "http://localhost:5000", "description": "Local server" }
+  ],
+  "paths": {
+    "/api/focas/ping": {
+      "get": {
+        "tags": ["System"],
+        "summary": "心跳检测",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResult" } } }
+          }
+        }
+      }
+    },
+    "/api/focas/sysinfo": {
+      "get": {
+        "tags": ["System"],
+        "summary": "读取CNC系统信息",
+        "parameters": [
+          { "$ref": "#/components/parameters/IpParam" },
+          { "$ref": "#/components/parameters/PortParam" },
+          { "$ref": "#/components/parameters/TimeoutParam" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SysInfoResult" } } } }
+        }
+      }
+    },
+    "/api/focas/status": {
+      "get": {
+        "tags": ["System"],
+        "summary": "读取CNC运行状态",
+        "parameters": [
+          { "$ref": "#/components/parameters/IpParam" },
+          { "$ref": "#/components/parameters/PortParam" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StatusResult" } } } }
+        }
+      }
+    },
+    "/api/focas/monitor": {
+      "get": {
+        "tags": ["Monitor"],
+        "summary": "综合监控数据（系统信息+状态+轴位置+动态数据）",
+        "parameters": [
+          { "$ref": "#/components/parameters/IpParam" },
+          { "$ref": "#/components/parameters/PortParam" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MonitorResult" } } } }
+        }
+      }
+    },
+    "/api/focas/alarm": {
+      "get": {
+        "tags": ["Alarm"],
+        "summary": "读取CNC报警信息",
+        "parameters": [
+          { "$ref": "#/components/parameters/IpParam" },
+          { "$ref": "#/components/parameters/PortParam" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AlarmResult" } } } }
+        }
+      }
+    },
+    "/api/focas/start": {
+      "post": {
+        "tags": ["Control"],
+        "summary": "启动CNC加工程序",
+        "parameters": [
+          { "$ref": "#/components/parameters/IpParam" },
+          { "$ref": "#/components/parameters/PortParam" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResult" } } } }
+        }
+      }
+    },
+    "/api/focas/reset": {
+      "post": {
+        "tags": ["Control"],
+        "summary": "CNC复位",
+        "parameters": [
+          { "$ref": "#/components/parameters/IpParam" },
+          { "$ref": "#/components/parameters/PortParam" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResult" } } } }
+        }
+      }
+    },
+    "/api/focas/program/download": {
+      "get": {
+        "tags": ["Program"],
+        "summary": "从CNC下载NC程序",
+        "parameters": [
+          { "$ref": "#/components/parameters/IpParam" },
+          { "$ref": "#/components/parameters/PortParam" },
+          { "name": "program", "in": "query", "required": true, "schema": { "type": "integer", "default": 1 }, "description": "程序号" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProgramDownloadResult" } } } }
+        }
+      }
+    },
+    "/api/focas/program/upload": {
+      "post": {
+        "tags": ["Program"],
+        "summary": "上传NC程序到CNC",
+        "parameters": [
+          { "$ref": "#/components/parameters/IpParam" },
+          { "$ref": "#/components/parameters/PortParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "text/plain": { "schema": { "type": "string", "description": "NC程序内容（纯文本）" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProgramUploadResult" } } } }
+        }
+      }
+    },
+    "/api/focas/program/run": {
+      "post": {
+        "tags": ["Program"],
+        "summary": "搜索并运行指定程序号的NC程序",
+        "parameters": [
+          { "$ref": "#/components/parameters/IpParam" },
+          { "$ref": "#/components/parameters/PortParam" },
+          { "name": "program", "in": "query", "required": true, "schema": { "type": "integer" }, "description": "程序号" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProgramRunResult" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "IpParam": { "name": "ip", "in": "query", "required": false, "schema": { "type": "string", "default": "127.0.0.1" }, "description": "CNC IP地址" },
+      "PortParam": { "name": "port", "in": "query", "required": false, "schema": { "type": "integer", "default": 8193 }, "description": "CNC端口" },
+      "TimeoutParam": { "name": "timeout", "in": "query", "required": false, "schema": { "type": "integer", "default": 3 }, "description": "连接超时(秒)" }
+    },
+    "schemas": {
+      "ApiResult": {
+        "type": "object",
+        "properties": {
+          "Success": { "type": "boolean" },
+          "Data": { "type": "object" },
+          "ErrorCode": { "type": "integer" },
+          "ErrorMsg": { "type": "string" }
+        }
+      },
+      "SysInfoData": {
+        "type": "object",
+        "properties": {
+          "Series": { "type": "string" },
+          "Version": { "type": "string" },
+          "CncType": { "type": "string" },
+          "AxisCount": { "type": "integer" }
+        }
+      },
+      "SysInfoResult": { "allOf": [ { "$ref": "#/components/schemas/ApiResult" }, { "type": "object", "properties": { "Data": { "$ref": "#/components/schemas/SysInfoData" } } } ] },
+      "StatusData": {
+        "type": "object",
+        "properties": {
+          "Aut": { "type": "integer", "description": "0:MDI 1:MEM 3:EDIT 4:Handwheel 5:JOG 9:Zero" },
+          "Run": { "type": "integer", "description": "0:STOP 1:PAUSE 2:RUN" },
+          "Motion": { "type": "integer" },
+          "Mstb": { "type": "integer" },
+          "Emergency": { "type": "integer" },
+          "ModeName": { "type": "string" },
+          "RunStatusName": { "type": "string" }
+        }
+      },
+      "StatusResult": { "allOf": [ { "$ref": "#/components/schemas/ApiResult" }, { "type": "object", "properties": { "Data": { "$ref": "#/components/schemas/StatusData" } } } ] },
+      "AxisData": {
+        "type": "object",
+        "properties": {
+          "Name": { "type": "string" },
+          "Absolute": { "type": "number" },
+          "Machine": { "type": "number" },
+          "Relative": { "type": "number" },
+          "Distance": { "type": "number" }
+        }
+      },
+      "MonitorData": {
+        "type": "object",
+        "properties": {
+          "SysInfo": { "$ref": "#/components/schemas/SysInfoData" },
+          "Dynamic": { "type": "object", "properties": { "MainProgram": { "type": "integer" }, "CurrentProgram": { "type": "integer" }, "SeqNum": { "type": "integer" }, "Alarm": { "type": "integer" }, "ActF": { "type": "integer" }, "ActS": { "type": "integer" } } },
+          "Axes": { "type": "array", "items": { "$ref": "#/components/schemas/AxisData" } },
+          "Status": { "$ref": "#/components/schemas/StatusData" }
+        }
+      },
+      "MonitorResult": { "allOf": [ { "$ref": "#/components/schemas/ApiResult" }, { "type": "object", "properties": { "Data": { "$ref": "#/components/schemas/MonitorData" } } } ] },
+      "AlarmResult": { "allOf": [ { "$ref": "#/components/schemas/ApiResult" }, { "type": "object", "properties": { "Data": { "type": "object", "properties": { "Alarm": { "type": "integer" } } } } } ] },
+      "ProgramDownloadResult": { "allOf": [ { "$ref": "#/components/schemas/ApiResult" }, { "type": "object", "properties": { "Data": { "type": "object", "properties": { "Program": { "type": "integer" }, "Content": { "type": "string" }, "Size": { "type": "integer" } } } } } ] },
+      "ProgramUploadResult": { "allOf": [ { "$ref": "#/components/schemas/ApiResult" }, { "type": "object", "properties": { "Data": { "type": "object", "properties": { "BytesSent": { "type": "integer" } } } } } ] },
+      "ProgramRunResult": { "allOf": [ { "$ref": "#/components/schemas/ApiResult" }, { "type": "object", "properties": { "Data": { "type": "object", "properties": { "Program": { "type": "integer" }, "Action": { "type": "string" } } } } } ] }
+    }
+  }
+}
