@@ -725,13 +725,14 @@ static int api_write_pcode_macro(ushort h, const char *body, char *resp) {
 
 /* GET /api/focas/plc/{type}/{addr} */
 static int api_read_plc(ushort h, int addrType, int addrNum, int bitIndex, char *resp) {
-    IODBPMC pmc;
-    memset(&pmc, 0, sizeof(pmc));
+    char buf[8 + 1];
+    memset(buf, 0, sizeof(buf));
+    IODBPMC *pmc = (IODBPMC*)buf;
     int dataType = (bitIndex >= 0) ? 1 : 0;
-    short ret = pmc_rdpmcrng(h, (short)addrType, (short)dataType, (unsigned short)addrNum, (unsigned short)addrNum, (short)sizeof(pmc), &pmc);
+    short ret = pmc_rdpmcrng(h, (short)addrType, (short)dataType, (unsigned short)addrNum, (unsigned short)addrNum, (short)sizeof(buf), pmc);
     if (ret != EW_OK)
         return sprintf(resp, "{\"Success\":false,\"Data\":null,\"ErrorCode\":%d,\"ErrorMsg\":\"%s\"}", ret, focas_error(ret));
-    int byteVal = (unsigned char)pmc.u.cdata[0];
+    int byteVal = (unsigned char)buf[8];
     int bitVal = (bitIndex >= 0 && bitIndex <= 7) ? ((byteVal >> bitIndex) & 1) : -1;
     return sprintf(resp,
         "{\"Success\":true,\"Data\":{\"AddressType\":%d,\"AddressNum\":%d,\"ByteValue\":%d,\"HexValue\":\"0x%02X\",\"BitValue\":%d,\"BitIndex\":%d},\"ErrorCode\":0}",
