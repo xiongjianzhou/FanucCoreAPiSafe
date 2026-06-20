@@ -725,11 +725,12 @@ static int api_write_pcode_macro(ushort h, const char *body, char *resp) {
 
 /* GET /api/focas/plc/{type}/{addr} */
 static int api_read_plc(ushort h, int addrType, int addrNum, int bitIndex, char *resp) {
+    /* Always read in byte mode (dataType=0) and extract bit manually.
+     * Bit mode (dataType=1) causes FOCAS library to return data in different layout. */
     char buf[8 + 1];
     memset(buf, 0, sizeof(buf));
     IODBPMC *pmc = (IODBPMC*)buf;
-    int dataType = (bitIndex >= 0) ? 1 : 0;
-    short ret = pmc_rdpmcrng(h, (short)addrType, (short)dataType, (unsigned short)addrNum, (unsigned short)addrNum, (short)sizeof(buf), pmc);
+    short ret = pmc_rdpmcrng(h, (short)addrType, 0, (unsigned short)addrNum, (unsigned short)addrNum, (short)sizeof(buf), pmc);
     if (ret != EW_OK)
         return sprintf(resp, "{\"Success\":false,\"Data\":null,\"ErrorCode\":%d,\"ErrorMsg\":\"%s\"}", ret, focas_error(ret));
     int byteVal = (unsigned char)buf[8];
