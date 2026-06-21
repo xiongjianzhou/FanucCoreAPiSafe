@@ -13,6 +13,9 @@
 #include <time.h>
 #include <errno.h>
 #include <math.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
+#include <pthread.h>
 #include "fwlib32.h"
 
 #ifdef _WIN32
@@ -55,6 +58,40 @@
 #define BUF_SIZE 65536
 #define RESP_SIZE 131072
 #define POINT_DIV 1000.0
+
+/* ============ Data collector ============ */
+
+#define MAX_COLLECT_ITEMS 64
+#define COLLECT_NAME_LEN 32
+#define COLLECT_CONFIG_PATH "/home/xjz/Desktop/FanucCoreAPi/collect.json"
+
+enum { COLLECT_TYPE_PLC, COLLECT_TYPE_MACRO, COLLECT_TYPE_STATUS };
+
+typedef struct {
+    char name[COLLECT_NAME_LEN];
+    int type;
+    int interval_ms;
+    int addr_type, addr_num, bit;
+    int macro_num;
+    /* runtime */
+    double dval;
+    int ival;
+    int error;
+    time_t last_refresh;
+} CollectItem;
+
+typedef struct {
+    pthread_mutex_t lock;
+    pthread_t thread;
+    int running;
+    char cnc_ip[64];
+    ushort cnc_port;
+    int cnc_timeout;
+    CollectItem items[MAX_COLLECT_ITEMS];
+    int item_count;
+} CollectCache;
+
+static CollectCache g_cache;
 
 static volatile int g_running = 1;
 static char g_logfile[256] = "fwlibeth.log";
@@ -134,6 +171,181 @@ static ushort get_handle(const char *ip, ushort port, int timeout) {
         h = 0;
     }
     return h;
+}
+
+/* ============ Data collector ============ */
+
+static const char *json_str_val(const char *body, const char *key);
+static const char *json_num_val(const char *body, const char *key, long *val);
+
+static int load_collect_config(CollectCache *cache) {
+    int fd = OPEN_FILE(COLLECT_CONFIG_PATH);
+    if (fd < 0) return 0;
+    char raw[32768];
+    int total = 0, n;
+    while (total < (int)sizeof(raw) - 1) {
+        n = READ(fd, raw + total, sizeof(raw) - 1 - total);
+        if (n <= 0) break;
+        total += n;
+    }
+    CLOSE_FILE(fd);
+    raw[total] = 0;
+
+    const char *val = json_str_val(raw, "ip");
+    if (val) { int i = 0; while (*val && *val != '"' && i < 63) cache->cnc_ip[i++] = *val++; cache->cnc_ip[i] = 0; }
+
+    const char *items_start = strstr(raw, "\"items\"");
+    if (!items_start) return 0;
+    items_start = strstr(items_start, "[");
+    if (!items_start) return 0;
+    const char *p = items_start + 1;
+
+    cache->item_count = 0;
+    while (cache->item_count < MAX_COLLECT_ITEMS) {
+        p = strstr(p, "{");
+        if (!p) break;
+        const char *end = strstr(p, "}");
+        if (!end) break;
+        end++;
+        char itembuf[1024];
+        int ilen = end - p;
+        if (ilen >= (int)sizeof(itembuf)) ilen = sizeof(itembuf) - 1;
+        memcpy(itembuf, p, ilen);
+        itembuf[ilen] = 0;
+
+        CollectItem *it = &cache->items[cache->item_count];
+        memset(it, 0, sizeof(CollectItem));
+
+        val = json_str_val(itembuf, "name");
+        if (val) { int i = 0; while (*val && *val != '"' && i < COLLECT_NAME_LEN-1) it->name[i++] = *val++; }
+
+        val = json_str_val(itembuf, "type");
+        if (!val) { p = end; continue; }
+        if (strncmp(val, "plc", 3) == 0) { it->type = COLLECT_TYPE_PLC; }
+        else if (strncmp(val, "macro", 5) == 0) { it->type = COLLECT_TYPE_MACRO; }
+        else if (strncmp(val, "status", 6) == 0) { it->type = COLLECT_TYPE_STATUS; }
+        else { p = end; continue; }
+
+        json_num_val(itembuf, "interval_ms", (long*)&it->interval_ms);
+        if (it->interval_ms < 10) it->interval_ms = 100;
+
+        if (it->type == COLLECT_TYPE_PLC) {
+            long lv = -1;
+            json_num_val(itembuf, "addr_type", &lv); it->addr_type = (int)lv;
+            json_num_val(itembuf, "addr_num", &lv); it->addr_num = (int)lv;
+            lv = -1; json_num_val(itembuf, "bit", &lv); it->bit = (int)lv;
+        }
+        if (it->type == COLLECT_TYPE_MACRO) {
+            long lv = 0;
+            json_num_val(itembuf, "number", &lv); it->macro_num = (int)lv;
+        }
+
+        cache->item_count++;
+        p = end;
+    }
+    return cache->item_count;
+}
+
+static void refresh_collect_item(ushort h, CollectItem *it) {
+    it->error = 0;
+    switch (it->type) {
+    case COLLECT_TYPE_PLC: {
+        char buf[9];
+        memset(buf, 0, sizeof(buf));
+        short ret = pmc_rdpmcrng(h, (short)it->addr_type, 0,
+            (unsigned short)it->addr_num, (unsigned short)it->addr_num,
+            (short)sizeof(buf), (IODBPMC*)buf);
+        if (ret == EW_OK) {
+            unsigned char b = (unsigned char)buf[8];
+            it->dval = (it->bit >= 0 && it->bit <= 7) ? ((b >> it->bit) & 1) : (double)b;
+        } else it->error = ret;
+        break;
+    }
+    case COLLECT_TYPE_MACRO: {
+        double val = 0;
+        unsigned long num = 1;
+        short ret = cnc_rdmacror2(h, (unsigned long)it->macro_num, &num, &val);
+        if (ret == EW_OK) it->dval = val;
+        else it->error = ret;
+        break;
+    }
+    case COLLECT_TYPE_STATUS: {
+        ODBST st;
+        short ret = cnc_statinfo(h, &st);
+        if (ret == EW_OK) {
+            it->dval = st.aut * 100.0 + st.run;
+				it->ival = (st.emergency << 8) | (st.alarm << 4) | st.motion;
+        } else it->error = ret;
+        break;
+    }
+    }
+}
+
+static void collector_start(void) {
+    memset(g_cache.cnc_ip, 0, sizeof(g_cache.cnc_ip));
+    strcpy(g_cache.cnc_ip, "192.168.0.47");
+    g_cache.cnc_port = 8193;
+    g_cache.cnc_timeout = 3;
+    g_cache.item_count = 0;
+    g_cache.running = 1;
+    int loaded = load_collect_config(&g_cache);
+    if (loaded <= 0) { g_cache.running = 0; return; }
+    printf("  Data collector: %d items loaded, CNC=%s\n", loaded, g_cache.cnc_ip);
+}
+
+static void collector_stop(void) {
+    g_cache.running = 0;
+}
+
+static int api_collect(char *resp) {
+    int n = 0;
+    time_t now = time(NULL);
+    char ts[20]; strftime(ts, sizeof(ts), "%H:%M:%S", localtime(&now));
+    pthread_mutex_lock(&g_cache.lock);
+    n += sprintf(resp+n, "{\"Success\":true,\"Data\":{");
+    n += sprintf(resp+n, "\"updated\":\"%s\",\"itemCount\":%d,\"items\":{", ts, g_cache.item_count);
+    int first = 1;
+    for (int i = 0; i < g_cache.item_count; i++) {
+        CollectItem *it = &g_cache.items[i];
+        if (it->name[0] == 0) continue;
+        if (!first) n += sprintf(resp+n, ","); first = 0;
+        char its[20]; strftime(its, sizeof(its), "%H:%M:%S", localtime(&it->last_refresh));
+        n += sprintf(resp+n, "\"%s\":{\"value\":%.3f,\"error\":%d,\"updated\":\"%s\"}",
+            it->name, it->dval, it->error, its);
+    }
+    pthread_mutex_unlock(&g_cache.lock);
+    n += sprintf(resp+n, "}},\"ErrorCode\":0}");
+    return n;
+}
+
+static int api_collect_config(char *resp) {
+    struct stat st;
+    int fd = OPEN_FILE(COLLECT_CONFIG_PATH);
+    if (fd < 0)
+        return sprintf(resp, "{\"Success\":true,\"Data\":{\"loaded\":%d,\"running\":%d},\"ErrorCode\":0}",
+            g_cache.item_count, g_cache.running);
+    FSTAT_FD(fd, &st);
+    int len = (int)st.st_size;
+    if (len > 16384) len = 16384;
+    char buf[17384];
+    int nr = READ(fd, buf, len);
+    CLOSE_FILE(fd);
+    if (nr <= 0) nr = 0;
+    buf[nr] = 0;
+    char esc[17384];
+    int ep = 0;
+    for (int i = 0; i < nr && ep < 17380; i++) {
+        char c = buf[i];
+        if (c == '"') { esc[ep++] = '\\'; esc[ep++] = '"'; }
+        else if (c == '\\') { esc[ep++] = '\\'; esc[ep++] = '\\'; }
+        else if (c == '\n') { esc[ep++] = '\\'; esc[ep++] = 'n'; }
+        else if (c == '\r') {}
+        else if (c == '\t') { esc[ep++] = '\\'; esc[ep++] = 't'; }
+        else esc[ep++] = c;
+    }
+    esc[ep] = 0;
+    return sprintf(resp, "{\"Success\":true,\"Data\":{\"loaded\":%d,\"running\":%d,\"config\":\"%s\"},\"ErrorCode\":0}",
+        g_cache.item_count, g_cache.running, esc);
 }
 
 /* ============ Helper functions ============ */
@@ -1103,6 +1315,18 @@ static void handle_request(int fd, HttpRequest *req) {
         return;
     }
 
+    /* Data collector (no CNC handle needed) */
+    if (strcmp(req->path, "/api/focas/collect") == 0 && strcmp(req->method, "GET") == 0) {
+        n = api_collect(resp);
+        send_response(fd, 200, "OK", resp, n);
+        return;
+    }
+    if (strcmp(req->path, "/api/focas/collect/config") == 0 && strcmp(req->method, "GET") == 0) {
+        n = api_collect_config(resp);
+        send_response(fd, 200, "OK", resp, n);
+        return;
+    }
+
     /* All routes below need CNC handle */
     ushort h = get_handle(ip, port, timeout);
     if (!h) {
@@ -1302,6 +1526,7 @@ int main(int argc, char *argv[]) {
     }
 
     init_conn_pool();
+    collector_start();
 
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) { perror("socket"); return 1; }
@@ -1348,7 +1573,23 @@ int main(int argc, char *argv[]) {
             }
         }
         CLOSE_SOCKET(client_fd);
+
+        if (g_cache.running && g_cache.item_count > 0) {
+            for (int ci = 0; ci < g_cache.item_count; ci++) {
+                CollectItem *it = &g_cache.items[ci];
+                if (time(NULL) - it->last_refresh >= it->interval_ms / 1000.0) {
+                    ushort ch = get_handle(g_cache.cnc_ip, g_cache.cnc_port, g_cache.cnc_timeout);
+                    if (ch) {
+                        refresh_collect_item(ch, it);
+                        it->last_refresh = time(NULL);
+                    }
+                    break;
+                }
+            }
+        }
     }
+
+    collector_stop();
 
     for (int i = 0; i < MAX_CONN; i++) {
         if (g_conn[i].handle) cnc_freelibhndl(g_conn[i].handle);
