@@ -1,0 +1,784 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "FOCAS2 Web API",
+    "description": "发那科FOCAS2 CNC数据访问API（通过HTTP封装FOCAS2库调用）",
+    "version": "1.1.0"
+  },
+  "paths": {
+    "/api/focas/ping": {
+      "get": {
+        "summary": "健康检查",
+        "tags": [
+          "监控"
+        ],
+        "responses": {
+          "200": {
+            "description": "pong"
+          }
+        }
+      }
+    },
+    "/api/focas/sysinfo": {
+      "get": {
+        "summary": "获取CNC系统信息",
+        "tags": [
+          "监控"
+        ],
+        "responses": {
+          "200": {
+            "description": "系统信息"
+          }
+        }
+      }
+    },
+    "/api/focas/monitor": {
+      "get": {
+        "summary": "获取完整监控数据(系统信息+动态+坐标+状态)",
+        "tags": [
+          "监控"
+        ],
+        "responses": {
+          "200": {
+            "description": "监控数据"
+          }
+        }
+      }
+    },
+    "/api/focas/status": {
+      "get": {
+        "summary": "获取CNC运行状态",
+        "tags": [
+          "监控"
+        ],
+        "responses": {
+          "200": {
+            "description": "运行状态"
+          }
+        }
+      }
+    },
+    "/api/focas/start": {
+      "post": {
+        "deprecated": true,
+        "summary": "[已禁用] 循环启动(需MEM/MDI模式)",
+        "tags": [
+          "监控"
+        ],
+        "responses": {
+          "200": {
+            "description": "返回 403 Write operation disabled"
+          }
+        }
+      }
+    },
+    "/api/focas/reset": {
+      "post": {
+        "deprecated": true,
+        "summary": "[已禁用] 复位/停止CNC",
+        "tags": [
+          "监控"
+        ],
+        "responses": {
+          "200": {
+            "description": "返回 403 Write operation disabled"
+          }
+        }
+      }
+    },
+    "/api/focas/alarm": {
+      "get": {
+        "summary": "读取CNC当前报警信息(报警号/类型/轴号/文本)",
+        "tags": [
+          "监控"
+        ],
+        "responses": {
+          "200": {
+            "description": "报警信息"
+          }
+        }
+      }
+    },
+    "/api/focas/alarm/clear": {
+      "post": {
+        "deprecated": true,
+        "summary": "[已禁用] 清除CNC当前报警",
+        "tags": [
+          "监控"
+        ],
+        "responses": {
+          "200": {
+            "description": "返回 403 Write operation disabled"
+          }
+        }
+      }
+    },
+    "/api/focas/programs": {
+      "get": {
+        "summary": "获取NC程序列表(最多10个)",
+        "tags": [
+          "程序管理"
+        ],
+        "responses": {
+          "200": {
+            "description": "程序列表"
+          }
+        }
+      },
+      "put": {
+        "summary": "上传NC程序到CNC",
+        "tags": [
+          "程序管理"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "uploadReq",
+            "schema": {
+              "$ref": "#/definitions/ProgramUploadRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "上传结果"
+          }
+        }
+      }
+    },
+    "/api/focas/programs/{progNum}": {
+      "get": {
+        "summary": "读取指定程序内容",
+        "tags": [
+          "程序管理"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "progNum",
+            "type": "integer",
+            "required": true,
+            "description": "程序号"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "程序内容"
+          }
+        }
+      },
+      "delete": {
+        "deprecated": true,
+        "summary": "[已禁用] 删除CNC中的程序",
+        "tags": [
+          "程序管理"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "progNum",
+            "type": "integer",
+            "required": true,
+            "description": "程序号"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回 403 Write operation disabled"
+          }
+        }
+      }
+    },
+    "/api/focas/programs/actpt": {
+      "get": {
+        "summary": "获取活动程序指针(当前执行块号)",
+        "tags": [
+          "程序管理"
+        ],
+        "responses": {
+          "200": {
+            "description": "程序指针"
+          }
+        }
+      }
+    },
+    "/api/focas/programs/{progNum}/run": {
+      "post": {
+        "deprecated": true,
+        "summary": "[已禁用] 自动运行指定程序(搜索+启动)",
+        "tags": [
+          "程序管理"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "progNum",
+            "type": "integer",
+            "required": true,
+            "description": "程序号"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回 403 Write operation disabled"
+          }
+        }
+      }
+    },
+    "/api/focas/programs/{progNum}/autostart": {
+      "post": {
+        "deprecated": true,
+        "summary": "[已禁用] 安全自动启动(复位+报警检查+搜索+启动)",
+        "tags": [
+          "程序管理"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "progNum",
+            "type": "integer",
+            "required": true,
+            "description": "程序号"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回 403 Write operation disabled"
+          }
+        }
+      }
+    },
+    "/api/focas/macros": {
+      "get": {
+        "summary": "批量连续读取用户宏变量",
+        "tags": [
+          "宏变量"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "type": "integer",
+            "default": 100,
+            "description": "起始变量号"
+          },
+          {
+            "in": "query",
+            "name": "count",
+            "type": "integer",
+            "default": 1,
+            "description": "读取数量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "宏变量值列表"
+          }
+        }
+      }
+    },
+    "/api/focas/macros/batch": {
+      "post": {
+        "summary": "非连续多点读取用户宏变量",
+        "tags": [
+          "宏变量"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "numbers",
+            "description": "变量号列表",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "宏变量值"
+          }
+        }
+      }
+    },
+    "/api/focas/macros/user/{macroNum}": {
+      "get": {
+        "summary": "读取单个用户宏#变量",
+        "tags": [
+          "宏变量"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "macroNum",
+            "type": "integer",
+            "required": true,
+            "description": "宏变量号"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "宏变量值"
+          }
+        }
+      }
+    },
+    "/api/focas/macros/user": {
+      "put": {
+        "deprecated": true,
+        "summary": "[已禁用] 写入用户宏#变量",
+        "tags": [
+          "宏变量"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "req",
+            "schema": {
+              "$ref": "#/definitions/MacroWriteRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回 403 Write operation disabled"
+          }
+        }
+      }
+    },
+    "/api/focas/macros/pcode/{macroNum}": {
+      "get": {
+        "summary": "读取P代码宏变量",
+        "tags": [
+          "宏变量"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "macroNum",
+            "type": "integer",
+            "required": true,
+            "description": "宏变量号"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "P代码宏变量值"
+          }
+        }
+      }
+    },
+    "/api/focas/macros/pcode": {
+      "put": {
+        "deprecated": true,
+        "summary": "[已禁用] 写入P代码宏变量",
+        "tags": [
+          "宏变量"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "req",
+            "schema": {
+              "$ref": "#/definitions/MacroWriteRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回 403 Write operation disabled"
+          }
+        }
+      }
+    },
+    "/api/focas/pmc": {
+      "get": {
+        "summary": "批量连续读取PMC地址(byte/bit)",
+        "tags": [
+          "PMC/PLC"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "type": "string",
+            "default": "G",
+            "description": "地址类型: G/F/Y/X/A/R/T/K/C/D/E"
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "type": "integer",
+            "default": 0,
+            "description": "起始地址偏移"
+          },
+          {
+            "in": "query",
+            "name": "count",
+            "type": "integer",
+            "default": 1,
+            "description": "读取数量"
+          },
+          {
+            "in": "query",
+            "name": "startBit",
+            "type": "integer",
+            "default": -1,
+            "description": "起始位号0-7(-1=byte模式)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PMC地址值"
+          }
+        }
+      },
+      "put": {
+        "deprecated": true,
+        "summary": "[已禁用] 写入PMC/PLC地址值",
+        "tags": [
+          "PMC/PLC"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "req",
+            "schema": {
+              "$ref": "#/definitions/PLCWriteRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回 403 Write operation disabled"
+          }
+        }
+      }
+    },
+    "/api/focas/pmc/batch": {
+      "post": {
+        "summary": "非连续多点读取PMC地址",
+        "tags": [
+          "PMC/PLC"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "addresses",
+            "description": "地址列表如[G0.3,D100]",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PMC地址值"
+          }
+        }
+      }
+    },
+    "/api/focas/pmc/{type}/{addr}": {
+      "get": {
+        "summary": "读取单个PMC地址(数字类型码)",
+        "tags": [
+          "PMC/PLC"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "type",
+            "type": "integer",
+            "required": true,
+            "description": "地址类型: 0=G 1=F 2=Y 3=X 4=A 5=R 6=T 7=K 8=C 9=D 10=E"
+          },
+          {
+            "in": "path",
+            "name": "addr",
+            "type": "integer",
+            "required": true,
+            "description": "地址号"
+          },
+          {
+            "in": "query",
+            "name": "bit",
+            "type": "integer",
+            "default": -1,
+            "description": "位索引(0-7)，-1=字节模式"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PMC地址值"
+          }
+        }
+      }
+    },
+    "/api/focas/plc/{type}/{addr}": {
+      "get": {
+        "summary": "读取单个PLC地址(旧接口兼容)",
+        "tags": [
+          "PLC兼容"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "type",
+            "type": "integer",
+            "required": true,
+            "description": "地址类型: 0=G 1=F 2=Y 3=X 4=A 5=R 6=T 7=K 8=C 9=D 10=E"
+          },
+          {
+            "in": "path",
+            "name": "addr",
+            "type": "integer",
+            "required": true,
+            "description": "地址号"
+          },
+          {
+            "in": "query",
+            "name": "bit",
+            "type": "integer",
+            "default": -1,
+            "description": "位索引(0-7)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PLC地址值"
+          }
+        }
+      }
+    },
+    "/api/focas/plc": {
+      "put": {
+        "deprecated": true,
+        "summary": "[已禁用] 写入PLC地址(旧接口兼容)",
+        "tags": [
+          "PLC兼容"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "req",
+            "schema": {
+              "$ref": "#/definitions/PLCWriteRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回 403 Write operation disabled"
+          }
+        }
+      }
+    },
+    "/api/focas/parameters/{paramNum}": {
+      "get": {
+        "summary": "读取CNC参数",
+        "tags": [
+          "CNC参数"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "paramNum",
+            "type": "integer",
+            "required": true,
+            "description": "参数号"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "参数值"
+          }
+        }
+      }
+    },
+    "/api/focas/parameters": {
+      "put": {
+        "deprecated": true,
+        "summary": "[已禁用] 写入CNC参数",
+        "tags": [
+          "CNC参数"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "req",
+            "schema": {
+              "$ref": "#/definitions/ParameterWriteRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回 403 Write operation disabled"
+          }
+        }
+      }
+    },
+    "/api/focas/override": {
+      "get": {
+        "summary": "读取操作面板倍率信号（进给倍率、主轴倍率、快移倍率等）",
+        "tags": [
+          "监控"
+        ],
+        "responses": {
+          "200": {
+            "description": "倍率信号",
+            "schema": {
+              "$ref": "#/definitions/OverrideSignals"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ProgramUploadRequest": {
+      "type": "object",
+      "required": [
+        "progNum",
+        "content"
+      ],
+      "properties": {
+        "progNum": {
+          "type": "integer",
+          "description": "程序号"
+        },
+        "content": {
+          "type": "string",
+          "description": "程序内容(不含O头和%)"
+        }
+      }
+    },
+    "MacroWriteRequest": {
+      "type": "object",
+      "required": [
+        "number",
+        "value"
+      ],
+      "properties": {
+        "number": {
+          "type": "integer",
+          "description": "宏变量号"
+        },
+        "value": {
+          "type": "number",
+          "description": "值"
+        }
+      }
+    },
+    "PLCWriteRequest": {
+      "type": "object",
+      "required": [
+        "addressType",
+        "addressNum",
+        "value"
+      ],
+      "properties": {
+        "addressType": {
+          "type": "integer",
+          "description": "地址类型: 0=G 1=F 2=Y 3=X 4=A 5=R 6=T 7=K 8=C 9=D 10=E"
+        },
+        "addressNum": {
+          "type": "integer",
+          "description": "地址号"
+        },
+        "bitIndex": {
+          "type": "integer",
+          "default": -1,
+          "description": "位索引(0-7)，-1=字节模式"
+        },
+        "value": {
+          "type": "integer",
+          "description": "值(位:0/1, 字节:0-255)"
+        }
+      }
+    },
+    "ParameterWriteRequest": {
+      "type": "object",
+      "required": [
+        "paramNum",
+        "value"
+      ],
+      "properties": {
+        "paramNum": {
+          "type": "integer",
+          "description": "参数号"
+        },
+        "value": {
+          "type": "integer",
+          "description": "参数值"
+        }
+      }
+    },
+    "OverrideSignals": {
+      "type": "object",
+      "properties": {
+        "FeedOvrd": {
+          "type": "integer",
+          "format": "int16",
+          "description": "进给倍率(%)"
+        },
+        "SpdlOvrd": {
+          "type": "integer",
+          "format": "int16",
+          "description": "主轴倍率(%), 仅FS15D有效"
+        },
+        "RpdOvrd": {
+          "type": "integer",
+          "format": "int16",
+          "description": "快移倍率(%), 0/25/50/100"
+        },
+        "JogOvrd": {
+          "type": "integer",
+          "format": "int16",
+          "description": "手动JOG倍率(%)"
+        },
+        "Mode": {
+          "type": "integer",
+          "format": "int16",
+          "description": "操作模式信号"
+        },
+        "BlkDel": {
+          "type": "integer",
+          "format": "int16",
+          "description": "跳段(0=关,1=开)"
+        },
+        "SnglBlck": {
+          "type": "integer",
+          "format": "int16",
+          "description": "单段(0=关,1=开)"
+        },
+        "MachLock": {
+          "type": "integer",
+          "format": "int16",
+          "description": "机床锁住(0=正常,1=锁住)"
+        },
+        "DryRun": {
+          "type": "integer",
+          "format": "int16",
+          "description": "空运行(0=关,1=开)"
+        },
+        "FeedHold": {
+          "type": "integer",
+          "format": "int16",
+          "description": "进给保持(0=正常,1=保持中)"
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local server"
+    }
+  ]
+}
