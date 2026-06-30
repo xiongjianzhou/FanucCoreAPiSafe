@@ -1035,6 +1035,10 @@ static int api_alarm_clear(ushort h, char *resp) {
     return sprintf(resp, "{\"Success\":false,\"Data\":null,\"ErrorCode\":%d,\"ErrorMsg\":\"%s\"}", ret, focas_error(ret));
 }
 
+static int write_disabled(char *resp) {
+    return sprintf(resp, "{\"Success\":false,\"Data\":null,\"ErrorCode\":403,\"ErrorMsg\":\"Write operation disabled\"}");
+}
+
 /* GET /api/focas/macros - range read cnc_rdmacror2 with double array */
 static int api_macros_range(ushort h, int start, int count, char *resp) {
     if (count <= 0 || count > 500) count = 1;
@@ -1353,16 +1357,16 @@ static void handle_request(int fd, HttpRequest *req) {
         n = api_monitor(h, resp);
     }
     else if (strcmp(req->path, "/api/focas/start") == 0 && strcmp(req->method, "POST") == 0) {
-        n = api_start(h, resp);
+        n = write_disabled(resp);
     }
     else if (strcmp(req->path, "/api/focas/reset") == 0 && strcmp(req->method, "POST") == 0) {
-        n = api_reset(h, resp);
+        n = write_disabled(resp);
     }
     else if (strcmp(req->path, "/api/focas/alarm") == 0 && strcmp(req->method, "GET") == 0) {
         n = api_alarm(h, resp);
     }
     else if (strcmp(req->path, "/api/focas/alarm/clear") == 0 && strcmp(req->method, "POST") == 0) {
-        n = api_alarm_clear(h, resp);
+        n = write_disabled(resp);
     }
     /* --- Old program routes (backward compat) --- */
     else if (strcmp(req->path, "/api/focas/program/upload") == 0 && strcmp(req->method, "POST") == 0) {
@@ -1374,9 +1378,7 @@ static void handle_request(int fd, HttpRequest *req) {
         n = api_program_download(h, atol(prg_s), resp);
     }
     else if (strcmp(req->path, "/api/focas/program/run") == 0 && strcmp(req->method, "POST") == 0) {
-        char prg_s[16] = "1";
-        parse_query(req->query, "program", prg_s, sizeof(prg_s));
-        n = api_program_run(h, atol(prg_s), resp);
+        n = write_disabled(resp);
     }
     /* --- Override --- */
     else if (strcmp(req->path, "/api/focas/override") == 0) {
@@ -1405,9 +1407,9 @@ static void handle_request(int fd, HttpRequest *req) {
                 progNum = atol(subcopy);
                 const char *action = sub + (slash - subcopy) + 1;
                 if (strcmp(action, "run") == 0 && strcmp(req->method, "POST") == 0) {
-                    n = api_run_program(h, progNum, resp);
+                    n = write_disabled(resp);
                 } else if (strcmp(action, "autostart") == 0 && strcmp(req->method, "POST") == 0) {
-                    n = api_autostart(h, progNum, resp);
+                    n = write_disabled(resp);
                 } else {
                     goto unknown_route;
                 }
@@ -1416,7 +1418,7 @@ static void handle_request(int fd, HttpRequest *req) {
                 if (strcmp(req->method, "GET") == 0) {
                     n = api_program_content(h, progNum, resp);
                 } else if (strcmp(req->method, "DELETE") == 0) {
-                    n = api_program_delete(h, progNum, resp);
+                    n = write_disabled(resp);
                 } else {
                     goto unknown_route;
                 }
@@ -1440,7 +1442,7 @@ static void handle_request(int fd, HttpRequest *req) {
         else goto unknown_route;
     }
     else if (strcmp(req->path, "/api/focas/macros/user") == 0 && strcmp(req->method, "PUT") == 0) {
-        n = api_write_user_macro(h, req->body, resp);
+        n = write_disabled(resp);
     }
     else if (path_prefix(req->path, "/api/focas/macros/pcode/")) {
         long macroNum = 0;
@@ -1449,14 +1451,14 @@ static void handle_request(int fd, HttpRequest *req) {
         else goto unknown_route;
     }
     else if (strcmp(req->path, "/api/focas/macros/pcode") == 0 && strcmp(req->method, "PUT") == 0) {
-        n = api_write_pcode_macro(h, req->body, resp);
+        n = write_disabled(resp);
     }
     /* --- PLC API --- */
     else if (strcmp(req->path, "/api/focas/plc") == 0 && strcmp(req->method, "GET") == 0) {
         n = api_plc_query(h, req->query, resp);
     }
     else if (strcmp(req->path, "/api/focas/plc") == 0 && strcmp(req->method, "PUT") == 0) {
-        n = api_write_plc(h, req->body, resp);
+        n = write_disabled(resp);
     }
     else if (strcmp(req->path, "/api/focas/plc/batch") == 0 && strcmp(req->method, "POST") == 0) {
         n = api_plc_batch(h, req->body, resp);
@@ -1464,7 +1466,7 @@ static void handle_request(int fd, HttpRequest *req) {
     else if (path_prefix(req->path, "/api/focas/plc/")) {
         const char *sub = req->path + 15;
         if (strcmp(req->method, "PUT") == 0 && *sub == 0) {
-            n = api_write_plc(h, req->body, resp);
+            n = write_disabled(resp);
         } else {
             int addrType = 0, addrNum = 0;
             if (sscanf(sub, "%d/%d", &addrType, &addrNum) >= 2) {
@@ -1487,11 +1489,11 @@ static void handle_request(int fd, HttpRequest *req) {
         long paramNum = 0;
         path_int_after(req->path, "/api/focas/parameters/", &paramNum);
         if (strcmp(req->method, "GET") == 0) n = api_read_parameter(h, paramNum, resp);
-        else if (strcmp(req->method, "PUT") == 0) n = api_write_parameter(h, req->body, resp);
+        else if (strcmp(req->method, "PUT") == 0) n = write_disabled(resp);
         else goto unknown_route;
     }
     else if (strcmp(req->path, "/api/focas/parameters") == 0 && strcmp(req->method, "PUT") == 0) {
-        n = api_write_parameter(h, req->body, resp);
+        n = write_disabled(resp);
     }
     else {
         unknown_route:

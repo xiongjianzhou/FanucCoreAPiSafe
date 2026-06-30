@@ -44,6 +44,8 @@ curl "http://localhost:5000/api/focas/sysinfo?ip=192.168.0.47"
 
 All endpoints support `?ip=&port=8193&timeout=3` query parameters.
 
+> ⚠️ **v0.2 变更：仅保留程序上传接口（PUT/POST），其他所有写入操作均已禁用，返回 403。**
+
 ### Monitor
 
 | Method | Path | Description |
@@ -54,9 +56,9 @@ All endpoints support `?ip=&port=8193&timeout=3` query parameters.
 | GET | `/api/focas/monitor` | Full monitor data |
 | GET | `/api/focas/alarm` | Alarm status |
 | GET | `/api/focas/override` | Feed/spindle override |
-| POST | `/api/focas/start` | Cycle start |
-| POST | `/api/focas/reset` | Reset/stop |
-| POST | `/api/focas/alarm/clear` | Clear alarm |
+| ~~POST~~ | ~~`/api/focas/start`~~ | ~~Cycle start (disabled)~~ |
+| ~~POST~~ | ~~`/api/focas/reset`~~ | ~~Reset/stop (disabled)~~ |
+| ~~POST~~ | ~~`/api/focas/alarm/clear`~~ | ~~Clear alarm (disabled)~~ |
 
 ### Programs
 
@@ -64,11 +66,11 @@ All endpoints support `?ip=&port=8193&timeout=3` query parameters.
 |--------|------|-------------|
 | GET | `/api/focas/programs` | List programs |
 | GET | `/api/focas/programs/{num}` | Read program content |
-| PUT | `/api/focas/programs` | Upload program (JSON) |
-| DELETE | `/api/focas/programs/{num}` | Delete program |
+| **PUT** | **`/api/focas/programs`** | **Upload program (JSON)** |
+| ~~DELETE~~ | ~~`/api/focas/programs/{num}`~~ | ~~Delete program (disabled)~~ |
 | GET | `/api/focas/programs/actpt` | Active program pointer |
-| POST | `/api/focas/programs/{num}/run` | Run program |
-| POST | `/api/focas/programs/{num}/autostart` | Safe autostart (reset+run) |
+| ~~POST~~ | ~~`/api/focas/programs/{num}/run`~~ | ~~Run program (disabled)~~ |
+| ~~POST~~ | ~~`/api/focas/programs/{num}/autostart`~~ | ~~Safe autostart (disabled)~~ |
 
 ### Macros
 
@@ -76,9 +78,9 @@ All endpoints support `?ip=&port=8193&timeout=3` query parameters.
 |--------|------|-------------|
 | GET | `/api/focas/macros?start=&count=` | Range read macros |
 | GET | `/api/focas/macros/user/{num}` | Read user macro |
-| PUT | `/api/focas/macros/user` | Write user macro |
+| ~~PUT~~ | ~~`/api/focas/macros/user`~~ | ~~Write user macro (disabled)~~ |
 | GET | `/api/focas/macros/pcode/{num}` | Read P-code macro |
-| PUT | `/api/focas/macros/pcode` | Write P-code macro |
+| ~~PUT~~ | ~~`/api/focas/macros/pcode`~~ | ~~Write P-code macro (disabled)~~ |
 | POST | `/api/focas/macros/batch` | Batch read macros |
 
 ### PLC/PMC
@@ -87,7 +89,7 @@ All endpoints support `?ip=&port=8193&timeout=3` query parameters.
 |--------|------|-------------|
 | GET | `/api/focas/plc/{type}/{addr}` | Read PLC (numeric type) |
 | GET | `/api/focas/plc?type=G&start=&count=` | Read PLC (letter type) |
-| PUT | `/api/focas/plc` | Write PLC |
+| ~~PUT~~ | ~~`/api/focas/plc`~~ | ~~Write PLC (disabled)~~ |
 | POST | `/api/focas/plc/batch` | Batch read PLC |
 
 **Address type codes (FANUC standard):**
@@ -112,7 +114,7 @@ All endpoints support `?ip=&port=8193&timeout=3` query parameters.
 |--------|------|-------------|
 | GET | `/api/focas/parameters/{num}` | Read parameter |
 | GET | `/api/focas/parameters/axis/{num}` | Read axis-specific parameter |
-| PUT | `/api/focas/parameters` | Write parameter |
+| ~~PUT~~ | ~~`/api/focas/parameters`~~ | ~~Write parameter (disabled)~~ |
 
 ## Web UI
 
@@ -146,6 +148,7 @@ All endpoints support `?ip=&port=8193&timeout=3` query parameters.
 | 5 | Data error |
 | 6 | Function not available |
 | 12 | Mode error (MEM/MDI required) |
+| 403 | Write operation disabled (v0.2+) |
 
 ## Project Structure
 

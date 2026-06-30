@@ -60,26 +60,28 @@
     },
     "/api/focas/start": {
       "post": {
-        "summary": "循环启动(需MEM/MDI模式)",
+        "deprecated": true,
+        "summary": "[已禁用] 循环启动(需MEM/MDI模式)",
         "tags": [
           "监控"
         ],
         "responses": {
           "200": {
-            "description": "启动结果"
+            "description": "返回 403 Write operation disabled"
           }
         }
       }
     },
     "/api/focas/reset": {
       "post": {
-        "summary": "复位/停止CNC",
+        "deprecated": true,
+        "summary": "[已禁用] 复位/停止CNC",
         "tags": [
           "监控"
         ],
         "responses": {
           "200": {
-            "description": "复位结果"
+            "description": "返回 403 Write operation disabled"
           }
         }
       }
@@ -99,13 +101,14 @@
     },
     "/api/focas/alarm/clear": {
       "post": {
-        "summary": "清除CNC当前报警",
+        "deprecated": true,
+        "summary": "[已禁用] 清除CNC当前报警",
         "tags": [
           "监控"
         ],
         "responses": {
           "200": {
-            "description": "清除结果"
+            "description": "返回 403 Write operation disabled"
           }
         }
       }
@@ -165,7 +168,8 @@
         }
       },
       "delete": {
-        "summary": "删除CNC中的程序",
+        "deprecated": true,
+        "summary": "[已禁用] 删除CNC中的程序",
         "tags": [
           "程序管理"
         ],
@@ -180,7 +184,7 @@
         ],
         "responses": {
           "200": {
-            "description": "删除结果"
+            "description": "返回 403 Write operation disabled"
           }
         }
       }
@@ -200,7 +204,8 @@
     },
     "/api/focas/programs/{progNum}/run": {
       "post": {
-        "summary": "自动运行指定程序(搜索+启动)",
+        "deprecated": true,
+        "summary": "[已禁用] 自动运行指定程序(搜索+启动)",
         "tags": [
           "程序管理"
         ],
@@ -215,14 +220,15 @@
         ],
         "responses": {
           "200": {
-            "description": "运行结果"
+            "description": "返回 403 Write operation disabled"
           }
         }
       }
     },
     "/api/focas/programs/{progNum}/autostart": {
       "post": {
-        "summary": "安全自动启动(复位+报警检查+搜索+启动)",
+        "deprecated": true,
+        "summary": "[已禁用] 安全自动启动(复位+报警检查+搜索+启动)",
         "tags": [
           "程序管理"
         ],
@@ -237,7 +243,7 @@
         ],
         "responses": {
           "200": {
-            "description": "自动启动结果(含诊断信息)"
+            "description": "返回 403 Write operation disabled"
           }
         }
       }
@@ -321,7 +327,8 @@
     },
     "/api/focas/macros/user": {
       "put": {
-        "summary": "写入用户宏#变量",
+        "deprecated": true,
+        "summary": "[已禁用] 写入用户宏#变量",
         "tags": [
           "宏变量"
         ],
@@ -336,7 +343,7 @@
         ],
         "responses": {
           "200": {
-            "description": "写入结果"
+            "description": "返回 403 Write operation disabled"
           }
         }
       }
@@ -365,7 +372,8 @@
     },
     "/api/focas/macros/pcode": {
       "put": {
-        "summary": "写入P代码宏变量",
+        "deprecated": true,
+        "summary": "[已禁用] 写入P代码宏变量",
         "tags": [
           "宏变量"
         ],
@@ -380,7 +388,7 @@
         ],
         "responses": {
           "200": {
-            "description": "写入结果"
+            "description": "返回 403 Write operation disabled"
           }
         }
       }
@@ -428,7 +436,8 @@
         }
       },
       "put": {
-        "summary": "写入PMC/PLC地址值",
+        "deprecated": true,
+        "summary": "[已禁用] 写入PMC/PLC地址值",
         "tags": [
           "PMC/PLC"
         ],
@@ -443,7 +452,7 @@
         ],
         "responses": {
           "200": {
-            "description": "写入结果"
+            "description": "返回 403 Write operation disabled"
           }
         }
       }
@@ -548,7 +557,8 @@
     },
     "/api/focas/plc": {
       "put": {
-        "summary": "写入PLC地址(旧接口兼容)",
+        "deprecated": true,
+        "summary": "[已禁用] 写入PLC地址(旧接口兼容)",
         "tags": [
           "PLC兼容"
         ],
@@ -563,7 +573,7 @@
         ],
         "responses": {
           "200": {
-            "description": "写入结果"
+            "description": "返回 403 Write operation disabled"
           }
         }
       }
@@ -592,7 +602,8 @@
     },
     "/api/focas/parameters": {
       "put": {
-        "summary": "写入CNC参数",
+        "deprecated": true,
+        "summary": "[已禁用] 写入CNC参数",
         "tags": [
           "CNC参数"
         ],
@@ -607,7 +618,7 @@
         ],
         "responses": {
           "200": {
-            "description": "写入结果"
+            "description": "返回 403 Write operation disabled"
           }
         }
       }

@@ -102,20 +102,20 @@ const APIS = [
    r:'{"Success":true,"Data":{"DynamicAlarmCode":8,"AlarmStatus":0,"HasAlarm":true,"Alarms":[{"Number":8,"Type":6,"TypeName":"SV","Axis":0,"Message":"SERVO ALARM","MessageLength":11}],"DetailError":"0","DetailErrorInfo":"err_no=0 err_dtno=0"},"ErrorCode":0}',
    fields:[{n:"DynamicAlarmCode",t:"int",d:"动态报警码(0=无报警)"},{n:"AlarmStatus",t:"int",d:"报警状态标志"},{n:"HasAlarm",t:"bool",d:"是否有报警"},{n:"Alarms",t:"array",d:"报警列表(最多10条)"},{n:"→ Number",t:"short",d:"报警号"},{n:"→ Type",t:"short",d:"报警类型码 0=PS 1=OT 2=SV 3=IO 4=PS2 6=SV"},{n:"→ TypeName",t:"string",d:"类型名(PS/OT/SV/IO/PS2)"},{n:"→ Axis",t:"short",d:"关联轴号(0=无关联)"},{n:"→ Message",t:"string",d:"报警文本"},{n:"→ MessageLength",t:"short",d:"报警文本长度"},{n:"DetailError",t:"string",d:"详细错误码(字符串)"},{n:"DetailErrorInfo",t:"string",d:"详细错误诊断信息"}]},
 
-  {id:"start",m:"POST",rt:"/api/focas/start",desc:"循环启动（需MEM/MDI模式）",
-   note:'<b>用途：</b>发送循环启动(cycle start)指令给CNC。<br><b>底层调用：</b><code>cnc_start</code><br><b>前提条件：</b>CNC必须在MEM(自动)或MDI模式，且程序已选择/搜索。<br><b>返回错误码12：</b>当前模式不支持循环启动，请切换到MEM/MDI。<br><b>适用场景：</b>自动化产线远程启动、配合run/autostart使用。',
-   p:[],
-   r:'{"Success":true,"Data":null,"ErrorCode":0}'},
+{id:"start",m:"POST",rt:"/api/focas/start",desc:"[已禁用] 循环启动（需MEM/MDI模式）",
+    note:'<span class="tag">已禁用</span>该接口已屏蔽，始终返回 403。<br>原用途：发送循环启动(cycle start)指令给CNC。',
+    p:[],
+    r:'{"Success":false,"Data":null,"ErrorCode":403,"ErrorMsg":"Write operation disabled"}'},
 
-  {id:"reset",m:"POST",rt:"/api/focas/reset",desc:"复位/停止CNC",
-   note:'<b>用途：</b>发送复位(reset)指令给CNC，停止正在执行的程序。<br><b>底层调用：</b><code>cnc_reset</code><br><b>效果：</b>CNC立即停止运动、取消当前选择程序（部分CNC机型）。<br><b>与急停区别：</b>复位是软件指令，急停是硬件信号。复位后可立即操作，急停需手动复位急停按钮。<br><b>适用场景：</b>异常停止、安全保护、程序切换前的清理。',
-   p:[],
-   r:'{"Success":true,"Data":null,"ErrorCode":0}'},
+{id:"reset",m:"POST",rt:"/api/focas/reset",desc:"[已禁用] 复位/停止CNC",
+    note:'<span class="tag">已禁用</span>该接口已屏蔽，始终返回 403。<br>原用途：发送复位(reset)指令给CNC，停止正在执行的程序。',
+    p:[],
+    r:'{"Success":false,"Data":null,"ErrorCode":403,"ErrorMsg":"Write operation disabled"}'},
 
-  {id:"clearalarm",m:"POST",rt:"/api/focas/alarm/clear",desc:"清除CNC当前报警",
-       note:'<b>用途：</b>清除CNC当前报警状态。<br><b>底层调用：</b>通过状态复位清除报警。<br><b>注意：</b>仅可清除软件报警(PS等)，硬件报警(如急停、伺服过载)需要物理排除故障。<br><b>适用场景：</b>远程复位软件报警、自动化流程中的异常恢复步骤。',
-       p:[],
-       r:'{"Success":true,"Data":null,"ErrorCode":0}'},
+{id:"clearalarm",m:"POST",rt:"/api/focas/alarm/clear",desc:"[已禁用] 清除CNC当前报警",
+        note:'<span class="tag">已禁用</span>该接口已屏蔽，始终返回 403。<br>原用途：清除CNC当前报警状态。',
+        p:[],
+        r:'{"Success":false,"Data":null,"ErrorCode":403,"ErrorMsg":"Write operation disabled"}'},
 
       {id:"override",m:"GET",rt:"/api/focas/override",desc:"操作面板倍率信号（进给/主轴/快移/JOG倍率）",
        note:'<b>用途：</b>通过一次FOCAS调用(<code>cnc_rdopnlsgnl</code>)读取操作面板上全部的倍率旋钮设定值和状态信号。<br><b>关键字段：</b><br>— <code>FeedOvrd</code>: 进给倍率旋钮位置(%)，如 100=100%<br>— <code>SpdlOvrd</code>: 主轴倍率(%)。⚠️ 仅FS15D编译版本有效，非FS15D机型该字段可能无意义，可通过PMC地址读取替代<br>— <code>RpdOvrd</code>: 快移倍率(G00速度)，典型值 0/25/50/100(%)<br>— <code>JogOvrd</code>: 手动/JOG进给倍率(%)<br>— <code>FeedHold</code>: 进给保持状态(0=正常,1=保持中)<br>— <code>DryRun</code>: 空运行(0=关,1=开)<br>— <code>SnglBlck</code>: 单段执行(0=关,1=开)<br>— <code>BlkDel</code>: 跳段(0=执行,1=跳过)<br><b>适用场景：</b>监控面板实时显示倍率值、设备状态监测。<br><b>注意：</b>FocasSimulator返回的倍率值可能不真实，实际CNC上才有意义。',
@@ -143,10 +143,10 @@ const APIS = [
    req:'{"progNum":9000,"content":"O9000;\\n#1=50.0;\\nM30;"}',
    r:'{"Success":true,"Data":null,"ErrorCode":0}'},
 
-  {id:"progdel",m:"DELETE",rt:"/api/focas/programs/{progNum}",desc:"删除NC程序",
-   note:'<b>用途：</b>从CNC存储器中删除指定程序。<br><b>底层调用：</b><code>cnc_delete</code><br><b>适用场景：</b>清理旧程序、重新上传前删除。<br><b>注意：</b>删除正在运行的程序可能导致CNC报警。建议先确认程序不在执行中。',
-   p:[{n:"progNum",t:"short",d:"程序号（路径参数）",def:""}],
-   r:'{"Success":true,"Data":null,"ErrorCode":0}'},
+{id:"progdel",m:"DELETE",rt:"/api/focas/programs/{progNum}",desc:"[已禁用] 删除NC程序",
+    note:'<span class="tag">已禁用</span>该接口已屏蔽，始终返回 403。<br>原用途：从CNC存储器中删除指定程序。',
+    p:[{n:"progNum",t:"short",d:"程序号（路径参数）",def:""}],
+    r:'{"Success":false,"Data":null,"ErrorCode":403,"ErrorMsg":"Write operation disabled"}'},
 
   {id:"actpt",m:"GET",rt:"/api/focas/programs/actpt",desc:"活动程序指针（当前执行块）",
    note:'<b>用途：</b>获取当前正在执行的程序号和块号(行号)。<br><b>底层调用：</b><code>cnc_rdactpt</code><br><b>适用场景：</b>监控程序执行进度、确定当前加工位置。<br><b>注意：</b>CNC停止时返回最后执行的块号。',
@@ -154,17 +154,15 @@ const APIS = [
    r:'{"Success":true,"Data":{"ProgNo":1,"BlkNo":10},"ErrorCode":0}',
    fields:[{n:"ProgNo",t:"int",d:"当前执行程序号"},{n:"BlkNo",t:"int",d:"当前执行块号/行号"}]},
 
-  {id:"run",m:"POST",rt:"/api/focas/programs/{progNum}/run",desc:"自动运行（搜索+启动）",
-   note:'<b>用途：</b>搜索指定程序并启动循环运行。<br><b>底层调用：</b><code>cnc_search</code> + <code>cnc_start</code><br><b>执行步骤：</b>1)状态检查 → 2)读取当前程序 → 3)模式检查 → 4)搜索程序 → 5)启动运行<br><b>前提条件：</b>CNC必须在MEM模式，无报警。<br><b>与autostart的区别：</b>run不做复位和报警检查，更快但不够安全。<br><b>适用场景：</b>确认CNC状态正常的快速启动。',
-   p:[{n:"progNum",t:"short",d:"程序号（路径参数）",def:""}],
-   r:'{"Success":true,"Data":{"ProgNum":1000,"Number":"O1000","PreviousProgram":2000,"Mode":"自动","StepsCompleted":["check","read_current","mode_check","search","start"],"StartedAt":"2026-06-10 08:28:53"},"ErrorCode":0}',
-   fields:[{n:"ProgNum",t:"short",d:"启动的程序号"},{n:"Number",t:"string",d:"程序号字符串"},{n:"PreviousProgram",t:"int",d:"启动前的程序号"},{n:"Mode",t:"string",d:"CNC当前模式"},{n:"StepsCompleted",t:"array",d:"完成的步骤列表：check,read_current,mode_check,search,start"},{n:"StartedAt",t:"string",d:"启动时间 yyyy-MM-dd HH:mm:ss"}]},
+{id:"run",m:"POST",rt:"/api/focas/programs/{progNum}/run",desc:"[已禁用] 自动运行（搜索+启动）",
+    note:'<span class="tag">已禁用</span>该接口已屏蔽，始终返回 403。<br>原用途：搜索指定程序并启动循环运行。',
+    p:[{n:"progNum",t:"short",d:"程序号（路径参数）",def:""}],
+    r:'{"Success":false,"Data":null,"ErrorCode":403,"ErrorMsg":"Write operation disabled"}'},
 
-  {id:"autostart",m:"POST",rt:"/api/focas/programs/{progNum}/autostart",desc:"安全自动启动（复位+清报警+搜索+启动）",
-   note:'<b>用途：</b>带安全检查的自动运行——先复位、检查报警、再搜索启动。<br><b>执行步骤：</b>1)状态检查 → 2)模式检查 → 3)急停检查 → 4)复位 → 5)报警检查(复位前后对比) → 6)搜索程序 → 7)启动运行<br><b>与run的区别：</b><br>— autostart 会先复位(停止当前程序)<br>— autostart 会检查并记录复位前后的报警状态<br>— autostart 返回 WasReset 标志<br><b>适合场景：</b>无人值守、自动产线的程序切换，安全性更高。<br><b>注意：</b>复位会停止CNC当前正在执行的任何程序。',
-   p:[{n:"progNum",t:"short",d:"程序号（路径参数）",def:""}],
-   r:'{"Success":true,"Data":{"ProgNum":1000,"Number":"O1000","PreviousProgram":2000,"Mode":"自动","AlarmBeforeReset":0,"AlarmAfterReset":0,"WasReset":true,"StepsCompleted":["status_check","mode_check","emergency_check","reset","alarm_check","search","start"],"StartedAt":"2026-06-10 08:30:00"},"ErrorCode":0}',
-   fields:[{n:"ProgNum",t:"short",d:"启动的程序号"},{n:"Number",t:"string",d:"程序号字符串"},{n:"PreviousProgram",t:"int",d:"启动前的程序号"},{n:"Mode",t:"string",d:"CNC当前模式"},{n:"AlarmBeforeReset",t:"int",d:"复位前报警码"},{n:"AlarmAfterReset",t:"int",d:"复位后报警码"},{n:"WasReset",t:"bool",d:"是否执行了复位操作"},{n:"StepsCompleted",t:"array",d:"完成的步骤：status_check,mode_check,emergency_check,reset,alarm_check,search,start"},{n:"StartedAt",t:"string",d:"启动时间"}]}
+{id:"autostart",m:"POST",rt:"/api/focas/programs/{progNum}/autostart",desc:"[已禁用] 安全自动启动（复位+清报警+搜索+启动）",
+    note:'<span class="tag">已禁用</span>该接口已屏蔽，始终返回 403。<br>原用途：带安全检查的自动运行——先复位、检查报警、再搜索启动。',
+    p:[{n:"progNum",t:"short",d:"程序号（路径参数）",def:""}],
+    r:'{"Success":false,"Data":null,"ErrorCode":403,"ErrorMsg":"Write operation disabled"}'}
 ]},
 {
   cat:"宏变量", items:[
@@ -187,11 +185,11 @@ const APIS = [
    r:'{"Success":true,"Data":{"Number":500,"Value":123.456,"DecVal":6,"RawVal":123456000},"ErrorCode":0}',
    fields:[{n:"Number",t:"int",d:"宏变量号"},{n:"Value",t:"double",d:"浮点数值"},{n:"DecVal",t:"int",d:"小数点位数"},{n:"RawVal",t:"int",d:"原始整数值(Value × 10^DecVal)"}]},
 
-  {id:"macroput",m:"PUT",rt:"/api/focas/macros/user",desc:"写入用户宏变量",
-   note:'<b>用途：</b>写入用户宏变量 # 的值(100-999)。<br><b>底层调用：</b><code>cnc_wpmacror</code><br><b>请求体：</b><code>{"number": 500, "value": 123.456}</code><br><b>注意：</b>写入浮点数时CNC自动根据参数设置决定小数位数。<br><b>适用场景：</b>设定刀具补偿、工件偏置、计数器等宏变量。<br><b>返回错误：</b>变量号超出范围返回ErrorCode=3。',
-   p:[{n:"number",t:"int",d:"宏变量号"},{n:"value",t:"double",d:"要写入的值"}],
-   req:'{"number":500,"value":123.456}',
-   r:'{"Success":true,"Data":null,"ErrorCode":0}'},
+{id:"macroput",m:"PUT",rt:"/api/focas/macros/user",desc:"[已禁用] 写入用户宏变量",
+    note:'<span class="tag">已禁用</span>该接口已屏蔽，始终返回 403。<br>原用途：写入用户宏变量 # 的值(100-999)。',
+    p:[{n:"number",t:"int",d:"宏变量号"},{n:"value",t:"double",d:"要写入的值"}],
+    req:'{"number":500,"value":123.456}',
+    r:'{"Success":false,"Data":null,"ErrorCode":403,"ErrorMsg":"Write operation disabled"}'},
 
   {id:"pcoget",m:"GET",rt:"/api/focas/macros/pcode/{macroNum}",desc:"读取P代码宏变量",
    note:'<b>用途：</b>读取P代码宏变量(通常 10000-19999 范围)。<br><b>底层调用：</b><code>cnc_rdmacror2</code> (类型参数不同)<br><b>与用户宏变量的区别：</b>P代码宏变量是系统级/参数级变量，存储CNC参数映像。<br><b>适用场景：</b>读取系统参数对应的宏变量映像。',
@@ -199,11 +197,11 @@ const APIS = [
    r:'{"Success":true,"Data":{"Number":10000,"Value":50.0,"DecVal":0,"RawVal":50},"ErrorCode":0}',
    fields:[{n:"Number",t:"int",d:"宏变量号"},{n:"Value",t:"double",d:"值"},{n:"DecVal",t:"int",d:"小数点位数"},{n:"RawVal",t:"int",d:"原始整数值"}]},
 
-  {id:"pcoput",m:"PUT",rt:"/api/focas/macros/pcode",desc:"写入P代码宏变量",
-   note:'<b>用途：</b>写入P代码宏变量值。<br><b>底层调用：</b><code>cnc_wpmacror</code><br><b>注意：</b>部分P代码宏变量为只读，写入可能返回错误码 7(写保护)。<br><b>适用场景：</b>修改系统参数映像值。',
-   p:[{n:"number",t:"int",d:"宏变量号"},{n:"value",t:"double",d:"要写入的值"}],
-   req:'{"number":10000,"value":50}',
-   r:'{"Success":true,"Data":null,"ErrorCode":0}'}
+{id:"pcoput",m:"PUT",rt:"/api/focas/macros/pcode",desc:"[已禁用] 写入P代码宏变量",
+    note:'<span class="tag">已禁用</span>该接口已屏蔽，始终返回 403。<br>原用途：写入P代码宏变量值。',
+    p:[{n:"number",t:"int",d:"宏变量号"},{n:"value",t:"double",d:"要写入的值"}],
+    req:'{"number":10000,"value":50}',
+    r:'{"Success":false,"Data":null,"ErrorCode":403,"ErrorMsg":"Write operation disabled"}'}
 ]},
 {
   cat:"PMC/PLC", items:[
@@ -226,11 +224,11 @@ const APIS = [
    r:'{"Success":true,"Data":{"AddressType":0,"AddressNum":100,"ByteValue":255,"HexValue":"0xFF","BitValue":-1,"BitIndex":-1},"ErrorCode":0}',
    fields:[{n:"AddressType",t:"short",d:"地址类型码(0-10)"},{n:"AddressNum",t:"ushort",d:"地址号"},{n:"ByteValue",t:"byte",d:"字节值(0-255)"},{n:"HexValue",t:"string",d:"十六进制字符串"},{n:"BitValue",t:"int",d:"位值(0/1), -1=字节模式"},{n:"BitIndex",t:"int",d:"位索引, -1=字节模式"}]},
 
-  {id:"pmcput",m:"PUT",rt:"/api/focas/pmc",desc:"写入PMC/PLC地址",
-   note:'<b>用途：</b>写入PMC/PLC地址值(字节或位)。<br><b>底层调用：</b><code>pmc_wrpmcrng</code><br><b>请求体：</b><code>{"addressType":0,"addressNum":100,"value":1,"bitIndex":0}</code><br><b>写入模式：</b><br>— bitIndex=-1: 字节写入(0-255)<br>— bitIndex=0-7: 位写入(0或1)<br><b>注意：</b><br>— 部分地址为只读(如 X 输入地址)<br>— 写保护返回错误码 7<br>— 写入F地址可能影响CNC行为，谨慎操作',
-   p:[{n:"addressType",t:"short",d:"0=G 1=F 2=Y 3=X 4=A 5=R 6=T 7=K 8=C 9=D 10=E"},{n:"addressNum",t:"ushort",d:"地址号"},{n:"value",t:"int",d:"值(位:0/1, 字节:0-255)"},{n:"bitIndex",t:"int",d:"位索引(-1=字节)",def:"-1"}],
-   req:'{"addressType":0,"addressNum":100,"value":1,"bitIndex":0}',
-   r:'{"Success":true,"Data":null,"ErrorCode":0}'},
+{id:"pmcput",m:"PUT",rt:"/api/focas/pmc",desc:"[已禁用] 写入PMC/PLC地址",
+    note:'<span class="tag">已禁用</span>该接口已屏蔽，始终返回 403。<br>原用途：写入PMC/PLC地址值(字节或位)。',
+    p:[{n:"addressType",t:"short",d:"0=G 1=F 2=Y 3=X 4=A 5=R 6=T 7=K 8=C 9=D 10=E"},{n:"addressNum",t:"ushort",d:"地址号"},{n:"value",t:"int",d:"值(位:0/1, 字节:0-255)"},{n:"bitIndex",t:"int",d:"位索引(-1=字节)",def:"-1"}],
+    req:'{"addressType":0,"addressNum":100,"value":1,"bitIndex":0}',
+    r:'{"Success":false,"Data":null,"ErrorCode":403,"ErrorMsg":"Write operation disabled"}'},
 
   {id:"plcget",m:"GET",rt:"/api/focas/plc/{type}/{addr}",desc:"读取单个PLC（旧接口兼容）",
    note:'<b>用途：</b>旧版兼容接口，逻辑与 <code>/api/focas/pmc/{type}/{addr}</code> 完全相同。<br><b>说明：</b>两个路由前缀并存：<br>— <code>/api/focas/pmc/*</code> (新接口)<br>— <code>/api/focas/plc/*</code> (本接口，旧版兼容)<br><b>建议：</b>新开发优先使用 <code>/api/focas/pmc/</code> 系列接口。',
@@ -238,11 +236,11 @@ const APIS = [
    r:'{"Success":true,"Data":{"AddressType":0,"AddressNum":100,"ByteValue":255,"HexValue":"0xFF","BitValue":-1,"BitIndex":-1},"ErrorCode":0}',
    fields:[{n:"AddressType",t:"short",d:"地址类型码"},{n:"AddressNum",t:"ushort",d:"地址号"},{n:"ByteValue",t:"byte",d:"字节值"},{n:"HexValue",t:"string",d:"十六进制"},{n:"BitValue",t:"int",d:"位值"},{n:"BitIndex",t:"int",d:"位索引"}]},
 
-  {id:"plcput",m:"PUT",rt:"/api/focas/plc",desc:"写入PLC地址（旧接口兼容）",
-   note:'<b>用途：</b>旧版兼容接口，逻辑与 <code>PUT /api/focas/pmc</code> 完全相同。<br><b>说明：</b>两个路由前缀并存。建议新开发使用 <code>/api/focas/pmc</code> 系列。',
-   p:[{n:"addressType",t:"short",d:"地址类型码"},{n:"addressNum",t:"ushort",d:"地址号"},{n:"value",t:"int",d:"值(位:0/1 字节:0-255)"},{n:"bitIndex",t:"int",d:"位索引(-1=字节)",def:"-1"}],
-   req:'{"addressType":0,"addressNum":100,"value":1,"bitIndex":0}',
-   r:'{"Success":true,"Data":null,"ErrorCode":0}'}
+{id:"plcput",m:"PUT",rt:"/api/focas/plc",desc:"[已禁用] 写入PLC地址（旧接口兼容）",
+    note:'<span class="tag">已禁用</span>该接口已屏蔽，始终返回 403。<br>原用途：写入PLC地址值(字节或位)，旧版兼容接口。',
+    p:[{n:"addressType",t:"short",d:"地址类型码"},{n:"addressNum",t:"ushort",d:"地址号"},{n:"value",t:"int",d:"值(位:0/1 字节:0-255)"},{n:"bitIndex",t:"int",d:"位索引(-1=字节)",def:"-1"}],
+    req:'{"addressType":0,"addressNum":100,"value":1,"bitIndex":0}',
+    r:'{"Success":false,"Data":null,"ErrorCode":403,"ErrorMsg":"Write operation disabled"}'}
 ]},
 {
   cat:"CNC参数", items:[
@@ -252,11 +250,11 @@ const APIS = [
    r:'{"Success":true,"Data":{"ParamNum":1,"Type":0,"LData":0,"IData":0,"CData":0},"ErrorCode":0}',
    fields:[{n:"ParamNum",t:"int",d:"参数号"},{n:"Type",t:"short",d:"数据类型: 0=位/长整型, 1=整型, 2=字节"},{n:"LData",t:"long",d:"长整型值(Type=0)"},{n:"IData",t:"short",d:"整型值(Type=1)"},{n:"CData",t:"byte",d:"字节值(Type=2)"}]},
 
-  {id:"paramput",m:"PUT",rt:"/api/focas/parameters",desc:"写入CNC参数",
-   note:'<b>用途：</b>写入CNC参数值(字节级)。<br><b>底层调用：</b><code>cnc_wrparam</code><br><b>请求体：</b><code>{"paramNum":1,"value":0}</code><br><b>注意：</b><br>— 仅写入字节级值(CData)<br>— 部分参数需要参数写保护开关(PWE=1)<br>— 修改关键参数可能导致CNC异常，请谨慎操作<br>— 部分系统参数修改后需要断电重启<br><b>适用场景：</b>参数配置、调试时修改参数。',
-   p:[{n:"paramNum",t:"int",d:"参数号"},{n:"value",t:"long",d:"要写入的值"}],
-   req:'{"paramNum":1,"value":0}',
-   r:'{"Success":true,"Data":null,"ErrorCode":0}'}
+{id:"paramput",m:"PUT",rt:"/api/focas/parameters",desc:"[已禁用] 写入CNC参数",
+    note:'<span class="tag">已禁用</span>该接口已屏蔽，始终返回 403。<br>原用途：写入CNC参数值(字节级)。',
+    p:[{n:"paramNum",t:"int",d:"参数号"},{n:"value",t:"long",d:"要写入的值"}],
+    req:'{"paramNum":1,"value":0}',
+    r:'{"Success":false,"Data":null,"ErrorCode":403,"ErrorMsg":"Write operation disabled"}'}
 ]},
 {
   cat:"公共参数与错误码", items:[

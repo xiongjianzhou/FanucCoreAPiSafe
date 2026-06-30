@@ -76,27 +76,29 @@
     },
     "/api/focas/start": {
       "post": {
+        "deprecated": true,
         "tags": ["Control"],
-        "summary": "启动CNC加工程序",
+        "summary": "[已禁用] 启动CNC加工程序",
         "parameters": [
           { "$ref": "#/components/parameters/IpParam" },
           { "$ref": "#/components/parameters/PortParam" }
         ],
         "responses": {
-          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResult" } } } }
+          "200": { "description": "返回 403 Write operation disabled", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResult" } } } }
         }
       }
     },
     "/api/focas/reset": {
       "post": {
+        "deprecated": true,
         "tags": ["Control"],
-        "summary": "CNC复位",
+        "summary": "[已禁用] CNC复位",
         "parameters": [
           { "$ref": "#/components/parameters/IpParam" },
           { "$ref": "#/components/parameters/PortParam" }
         ],
         "responses": {
-          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResult" } } } }
+          "200": { "description": "返回 403 Write operation disabled", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResult" } } } }
         }
       }
     },
@@ -135,15 +137,16 @@
     },
     "/api/focas/program/run": {
       "post": {
+        "deprecated": true,
         "tags": ["Program"],
-        "summary": "搜索并运行指定程序号的NC程序",
+        "summary": "[已禁用] 搜索并运行指定程序号的NC程序",
         "parameters": [
           { "$ref": "#/components/parameters/IpParam" },
           { "$ref": "#/components/parameters/PortParam" },
           { "name": "program", "in": "query", "required": true, "schema": { "type": "integer" }, "description": "程序号" }
         ],
         "responses": {
-          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProgramRunResult" } } } }
+          "200": { "description": "返回 403 Write operation disabled", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProgramRunResult" } } } }
         }
       }
     }
