@@ -95,6 +95,7 @@ static CollectCache g_cache;
 
 static volatile int g_running = 1;
 static char g_logfile[256] = "fwlibeth.log";
+static char g_default_ip[64] = "192.168.0.101";
 
 void handle_signal(int sig) { g_running = 0; }
 
@@ -648,10 +649,14 @@ static int path_int_after(const char *path, const char *prefix, long *val) {
 /* Simple JSON value extractors */
 static const char *json_str_val(const char *body, const char *key) {
     char search[64];
-    snprintf(search, sizeof(search), "\"%s\":\"", key);
+    snprintf(search, sizeof(search), "\"%s\":", key);
     const char *p = strstr(body, search);
     if (!p) return NULL;
-    return p + strlen(search);
+    p += strlen(search);
+    /* skip optional whitespace after colon */
+    while (*p == ' ' || *p == '\t') p++;
+    if (*p != '"') return NULL;
+    return p + 1;
 }
 
 static const char *json_num_val(const char *body, const char *key, long *val) {
@@ -1276,7 +1281,9 @@ static void handle_request(int fd, HttpRequest *req) {
     char resp[RESP_SIZE];
     int n = 0;
 
-    char ip[64] = "192.168.0.47";
+    char ip[64];
+    strncpy(ip, g_default_ip, sizeof(ip) - 1);
+    ip[sizeof(ip) - 1] = 0;
     char port_s[16] = "8193";
     char timeout_s[16] = "3";
     parse_query(req->query, "ip", ip, sizeof(ip));
@@ -1500,7 +1507,13 @@ static void handle_request(int fd, HttpRequest *req) {
 
 int main(int argc, char *argv[]) {
     int port = PORT_DEFAULT;
-    if (argc > 1) port = atoi(argv[1]);
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--ip") == 0 && i + 1 < argc) {
+            strncpy(g_default_ip, argv[++i], sizeof(g_default_ip) - 1);
+        } else {
+            port = atoi(argv[i]);
+        }
+    }
 
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
@@ -1549,12 +1562,24 @@ int main(int argc, char *argv[]) {
     printf("=======================================================\n");
     printf("  FOCAS2 Web API Server\n");
     printf("  Port:    %d\n", port);
+    printf("  CNC IP:  %s (default, override via ?ip=)\n", g_default_ip);
     printf("  Ping:    http://localhost:%d/api/focas/ping\n", port);
     printf("  Monitor: http://localhost:%d/api/focas/monitor\n", port);
     printf("  Swagger: http://localhost:%d/swagger\n", port);
     printf("  Docs:    http://localhost:%d/docs\n", port);
     printf("=======================================================\n");
     printf("\033[0m");
+
+    /* startup burst: refresh all collect items once so cache is warm */
+    if (g_cache.running && g_cache.item_count > 0) {
+        ushort h = get_handle(g_cache.cnc_ip, g_cache.cnc_port, g_cache.cnc_timeout);
+        if (h) {
+            for (int ci = 0; ci < g_cache.item_count; ci++) {
+                refresh_collect_item(h, &g_cache.items[ci]);
+                g_cache.items[ci].last_refresh = time(NULL);
+            }
+        }
+    }
 
     while (g_running) {
         struct sockaddr_in cli;

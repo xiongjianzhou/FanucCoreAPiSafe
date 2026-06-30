@@ -1,16 +1,78 @@
 {
-  "ip":"192.168.0.47",
-  "port":8193,
-  "timeout":3,
-  "items":[
-    {"name":"Y0.0","type":"plc","addr_type":2,"addr_num":0,"bit":0,"interval_ms":200},
-    {"name":"X6.1","type":"plc","addr_type":3,"addr_num":6,"bit":1,"interval_ms":200},
-    {"name":"X6.4","type":"plc","addr_type":3,"addr_num":6,"bit":4,"interval_ms":200},
-    {"name":"X6.5","type":"plc","addr_type":3,"addr_num":6,"bit":5,"interval_ms":200},
-    {"name":"X7.3","type":"plc","addr_type":3,"addr_num":7,"bit":3,"interval_ms":200},
-    {"name":"X7.4","type":"plc","addr_type":3,"addr_num":7,"bit":4,"interval_ms":200},
-    {"name":"#601","type":"macro","number":601,"interval_ms":500},
-    {"name":"#602","type":"macro","number":602,"interval_ms":500},
-    {"name":"status","type":"status","interval_ms":2000}
+  "ip": "192.168.0.101",
+  "port": 8193,
+  "timeout": 3,
+  "items": [
+    {
+      "name": "Y0.0",
+      "type": "plc",
+      "addr_type": 2,
+      "addr_num": 0,
+      "bit": 0,
+      "interval_ms": 200
+    },
+    {
+      "name": "X6.1",
+      "type": "plc",
+      "addr_type": 3,
+      "addr_num": 6,
+      "bit": 1,
+      "interval_ms": 200
+    },
+    {
+      "name": "X6.4",
+      "type": "plc",
+      "addr_type": 3,
+      "addr_num": 6,
+      "bit": 4,
+      "interval_ms": 200
+    },
+    {
+      "name": "X6.5",
+      "type": "plc",
+      "addr_type": 3,
+      "addr_num": 6,
+      "bit": 5,
+      "interval_ms": 200
+    },
+    {
+      "name": "X7.3",
+      "type": "plc",
+      "addr_type": 3,
+      "addr_num": 7,
+      "bit": 3,
+      "interval_ms": 200
+    },
+    {
+      "name": "X7.4",
+      "type": "plc",
+      "addr_type": 3,
+      "addr_num": 7,
+      "bit": 4,
+      "interval_ms": 200
+    },
+    {
+      "name": "#602",
+      "type": "macro",
+      "number": 602,
+      "interval_ms": 500
+    },
+    {
+      "name": "status",
+      "type": "status",
+      "interval_ms": 2000
+    },
+    {
+      "name": "#601",
+      "type": "macro",
+      "interval_ms": 500,
+      "number": 601
+    },
+    {
+      "name": "#500",
+      "type": "macro",
+      "interval_ms": 200,
+      "number": 500
+    }
   ]
 }
